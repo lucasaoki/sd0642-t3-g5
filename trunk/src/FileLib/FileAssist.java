@@ -10,42 +10,47 @@ import java.util.Scanner;
  *
  * @author seiji
  */
-public class FileAssist {
+public class FileAssist  {
 
     FileInputStream fin;    //Stream to read stream
     FileOutputStream fout;    //Stream to write stream
     File file;
     private String name_file;
+    String strFileContent;
 
     public static void main(String[] args) {
-        
+
         FileAssist a = new FileAssist();
         String name = "teste.txt";
+        a.create(name);
+        a.update(name, "hahaiud");
+        System.out.println(a.read(name));
         a.delete(name);
     }
 
     public String get_id_input() {
-        return this.file;
+        return this.name_file;
     }
 
     public void set_id_input(String name) {
         this.name_file = name;
     }
 
-    public void read(String name) {
-        int content;
+    public String read(String name) {
+
+        byte fileContent[] = new byte[(int) file.length()];
         try {
-            byte fileContent[] = new byte[(int) file.length()];
             set_id_input(name);
             fin = new FileInputStream(file);
             fin.read(fileContent);
-            String strFileContent = new String(fileContent);
-            System.out.println(strFileContent);
+
+            strFileContent = new String(fileContent);
             fin.close();
         } catch (IOException e) {
             System.err.print("Error - Unable to write to file");
             System.exit(-1);
         }
+        return strFileContent;
     }
 
     public int update(String name) {
@@ -63,12 +68,18 @@ public class FileAssist {
         return 0;
     }
 
-    public int update(String name, String str) {
+    public int  update(String name, String str) {
         try {
             set_id_input(name);
-            fout = new FileOutputStream(file, true);
-            fout.write(str.getBytes());
-            fout.close();
+            file = new File(name_file);
+            if (file.exists()) {
+                fout = new FileOutputStream(name_file, true);
+                fout.write(str.getBytes());
+                fout.close();
+                return 1;
+            } else {
+                return 0;
+            }
         } catch (IOException e) {
             System.err.print("Error - Unable to write to file");
             System.exit(-1);
@@ -79,13 +90,18 @@ public class FileAssist {
     public int delete(String name) {
         set_id_input(name);
         file = new File(name);
+        if (file.exists()) {
             file.delete();
-        return 0;
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
     public int create(String name, String str) {
         try {
-            file = new File(name);
+            set_id_input(name);
+            file = new File(name_file);
             file.createNewFile();
             update(name, str);
         } catch (IOException e) {
@@ -97,7 +113,8 @@ public class FileAssist {
 
     public int create(String name) {
         try {
-            file = new File(name);
+            set_id_input(name);
+            file = new File(name_file);
             file.createNewFile();
         } catch (IOException e) {
             System.err.print("Error - Unable to write to file");
@@ -105,4 +122,9 @@ public class FileAssist {
         }
         return 0;
     }
+
+    public void read_file(String temp) {
+        System.out.println(temp);
+    }
+
 }
