@@ -106,7 +106,7 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		}
 
 		@Override
-		public void pipeMsgEvent(PipeMsgEvent event) {
+		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
 			// TODO Auto-generated method stub
 			Message msg = event.getMessage();
 
@@ -137,10 +137,14 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 			case 3:
 				where = fileManager.FileNodePosition(mensageFileSystem
 						.getFileNameFromMessage(msg));
+			case 8:
+				status = fileManager.removeFileInUse(mensageFileSystem
+						.getFileNameFromMessage(msg));
 				break;
 			}
-			
+
 			try {
+				System.out.println("Enviando mensagem para o cliente");
 				sendMessage();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -167,41 +171,48 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 
 			String response;
 			switch (function) {
-			case 0:
-				
+			case 0: // Criação
+
 				if (status)
 					response = PipeMensageUtilites.okCreate;
 				else
 					response = PipeMensageUtilites.failCreate;
-				
+
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.create, fileName, response);
 				break;
 
-			case 1:
+			case 1: // Remoção
 				if (status)
 					response = PipeMensageUtilites.okRemove;
 				else
 					response = PipeMensageUtilites.failRemove;
+
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.delete, fileName, response);
 				break;
 
-			case 2:
+			case 2: // movimentação
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						Integer.toString(function), fileName,
+						PipeMensageUtilites.move, fileName,
 						Integer.toString(receiver));
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(openFile,
+						Integer.toString(-1), Integer.toString(receiver),
+						PipeMensageUtilites.receiveFile, fileName,
+						Integer.toString(sender));
+
 				break;
-			case 3:
+			case 3: // onde o arquivo está
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						Integer.toString(function), fileName,
+						PipeMensageUtilites.where, fileName,
 						Integer.toString(where));
 				break;
-			case 4:
+			case 4: // read
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.read, fileName,
@@ -211,18 +222,17 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						Integer.toString(-1), Integer.toString(receiver),
 						PipeMensageUtilites.open, fileName,
 						Integer.toString(sender));
-				
+
 				fileManager.insertFileInUse(fileName);
-				doConnection(msg, sender);
-				openConnection(msg, receiver);
+				//doConnection(msg, sender);
+				openConnection(openFile, receiver);
 
 				break;
 
-			case 5:
-
+			case 5:// write
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						PipeMensageUtilites.read, fileName,
+						PipeMensageUtilites.write, fileName,
 						Integer.toString(receiver));
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(openFile,
@@ -231,11 +241,22 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						Integer.toString(sender));
 
 				fileManager.insertFileInUse(fileName);
-				doConnection(msg, sender);
-				openConnection(msg, receiver);
+				//doConnection(msg, sender);
+				openConnection(openFile, receiver);
+				break;
+			case 8: //fechar o arquivo
+				if( status )
+					response = PipeMensageUtilites.okclose;
+				else
+					response = PipeMensageUtilites.failclose;
+				
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+						Integer.toString(-1), Integer.toString(sender),
+						PipeMensageUtilites.close, fileName, response);
+				
 				break;
 			}
-		
+
 			pipe.sendMessage(msg);
 		}
 
@@ -247,7 +268,7 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		private int where;
 		private int function;
 		private String fileName;
-		private boolean status;	
+		private boolean status;
 	}
 
 	public void sendBroadCasting(Message msg, int myself) throws IOException {
@@ -271,8 +292,7 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		// TODO Auto-generated method stub
 		ServerFileSystem s = new ServerFileSystem();
 
-		while (true)
-			;
+//		while (true);
 	}
 
 }
