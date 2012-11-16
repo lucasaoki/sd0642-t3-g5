@@ -3,11 +3,8 @@ package neighbourhoodNode;
 import java.io.File;
 import java.io.IOException;
 
-import centralNode.ServerFileSystem;
-
 import net.jxta.endpoint.Message;
 import net.jxta.exception.PeerGroupException;
-import net.jxta.impl.shell.bin.sleep.sleep;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
@@ -17,6 +14,8 @@ import net.jxta.util.JxtaBiDiPipe;
 import utilitesFileSystem.FileManager;
 import utilitesFileSystem.MsgFileSystem;
 import utilitesFileSystem.PipeMensageUtilites;
+import FileLib.Interface;
+import centralNode.ServerFileSystem;
 
 public class ClientFileSystem implements PipeMsgListener, Runnable {
 
@@ -32,11 +31,13 @@ public class ClientFileSystem implements PipeMsgListener, Runnable {
     private boolean delete = false;
     private boolean move = false;
     private boolean where = false;
-
+    private Interface face;
+    
     public ClientFileSystem() throws IOException, PeerGroupException {
 
         msgFileSystem = new MsgFileSystem();
-
+        face = new Interface();
+        
         home = new File(new File(".cache"), "client");
 
         manager = new NetworkManager(NetworkManager.ConfigMode.EDGE,
@@ -73,7 +74,7 @@ public class ClientFileSystem implements PipeMsgListener, Runnable {
                 response = msgFileSystem.getResponseFromMessage(msg);
                 if (response.equals(PipeMensageUtilites.okCreate)) {
                     // cria o arquivo
-                    get_data('c', msgFileSystem.getFileNameFromMessage(msg), null);
+                    face.get_data('c', msgFileSystem.getFileNameFromMessage(msg), null);
 
                     System.out.println("1 " + response + " " + function
                             + " " + msgFileSystem.getFileNameFromMessage(msg));

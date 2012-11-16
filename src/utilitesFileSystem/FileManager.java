@@ -1,11 +1,11 @@
 package utilitesFileSystem;
 
-import java.util.ArrayList;
 import java.util.Vector;
 
 public class FileManager {
 
 	public final static int NUM_MAX_NODE = 15;
+	@SuppressWarnings("rawtypes")
 	private Vector[] fileNames;
 	private Vector<String> filesInUse;
 	
@@ -28,6 +28,7 @@ public class FileManager {
 		return response;
 	}
 
+	@SuppressWarnings("unchecked")
 	public boolean InsertFileNode(int node, String fileName) {
 
 		if (node >= 0 && node < NUM_MAX_NODE && FileNodePosition(fileName) < 0) {
@@ -49,8 +50,12 @@ public class FileManager {
 		return false;
 	}
 
-	public void insertFileInUse(String FileName){
-		filesInUse.add(FileName);
+	public boolean insertFileInUse(String fileName){
+		return filesInUse.add(fileName);
+	}
+	
+	public boolean removeFileInUse(String fileName){
+		return filesInUse.remove(fileName);
 	}
 	
 	private boolean FileInUse(String FileName){

@@ -48,6 +48,12 @@ public class MsgFileSystem implements PipeMensageUtilites {
 			return 4;
 		if (function.equals(PipeMensageUtilites.write))
 			return 5;
+		if (function.equals(PipeMensageUtilites.open))
+			return 6;
+		if (function.equals(PipeMensageUtilites.receiveFile))
+			return 7;
+		if (function.equals(PipeMensageUtilites.close))
+			return 8;
 		
 		return response;
 	}
