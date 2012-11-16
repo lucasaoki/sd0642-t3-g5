@@ -77,6 +77,12 @@ public class MsgFileSystem implements PipeMensageUtilites {
 		return response;
 	}
 
+	public String getResponseFromMessage(Message message){
+		String response = message.getMessageElement(null,
+				PipeMensageUtilites.response).toString();
+		return response;
+	}
+	
 	public String getFileNameFromMessage(Message message) {
 		String fileName = message.getMessageElement(null,
 				PipeMensageUtilites.fileName).toString();

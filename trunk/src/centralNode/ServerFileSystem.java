@@ -2,10 +2,11 @@ package centralNode;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageFilterListener;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.PipeMsgEvent;
@@ -45,8 +46,8 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 
 		home = new File(new File(".cache"), "server");
 
-		manager = new NetworkManager(NetworkManager.ConfigMode.ADHOC, "Server",
-				home.toURI());
+		manager = new NetworkManager(NetworkManager.ConfigMode.RENDEZVOUS,
+				"Server", home.toURI());
 		manager.startNetwork();
 
 		netPeerGroup = manager.getNetPeerGroup();
@@ -54,8 +55,10 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		serverPipeAdv = ServerFileSystem.getPipeAdvertisement();
 		serverPipe = new JxtaServerPipe(netPeerGroup, serverPipeAdv);
 
-		// Thread t = new Thread(this);
-		// t.start();
+		serverPipe.setPipeTimeout(0);
+
+		Thread t = new Thread(this);
+		t.start();
 	}
 
 	public static PipeAdvertisement getPipeAdvertisement() {
@@ -74,14 +77,14 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 	public void run() {
 
 		bipipe = new JxtaBiDiPipe[FileManager.NUM_MAX_NODE];
-
 		while (executed && numNodes < FileManager.NUM_MAX_NODE) {
 			try {
 				bipipe[numNodes] = serverPipe.accept();
 				if (bipipe[numNodes] != null) {
-					// Thread t = new Thread(new ConnectionManager(bipipe));
-					// t.start();
 					numNodes++;
+					Thread t = new Thread(new ConnectionManager(
+							bipipe[numNodes - 1]));
+					t.start();
 				}
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -100,7 +103,6 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 			this.pipe = pipe;
 			pipe.setMessageListener(this);
 			execution = true;
-			mensageArrive = false;
 		}
 
 		@Override
@@ -115,34 +117,34 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 				receiver = mensageFileSystem.getReceiverFromMessage(msg);
 				fileName = mensageFileSystem.getFileNameFromMessage(msg);
 
-				mensageArrive = true;
+				System.out.println(sender + " " + receiver + " " + fileName
+						+ " " + function);
 			}
 
 			switch (function) {
 			case 0:
-
 				status = fileManager.InsertFileNode(sender,
 						mensageFileSystem.getFileNameFromMessage(msg));
 				break;
-
 			case 1:
-
 				status = fileManager.RemoveFileNode(sender,
 						mensageFileSystem.getFileNameFromMessage(msg));
 				break;
-
 			case 2:
-
 				status = fileManager.MoveFileBetweenNodes(receiver, sender,
 						mensageFileSystem.getFileNameFromMessage(msg));
 				break;
-
 			case 3:
-
 				where = fileManager.FileNodePosition(mensageFileSystem
 						.getFileNameFromMessage(msg));
-
 				break;
+			}
+			
+			try {
+				sendMessage();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 
@@ -151,72 +153,55 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 			// TODO Auto-generated method stub
 			try {
 				while (execution) {
-					if (mensageArrive) {
-						sendMessage();
-					} else {
-						Thread.sleep(3000);
-					}
+					Thread.sleep(3000);
 				}
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
-		void sendMessage() throws IOException {
+		synchronized void sendMessage() throws IOException {
 			Message msg = new Message();
 			Message openFile = new Message();
 
 			String response;
 			switch (function) {
 			case 0:
-
+				
 				if (status)
-					response = "file inserted";
+					response = PipeMensageUtilites.okCreate;
 				else
-					response = "file exist";
-
+					response = PipeMensageUtilites.failCreate;
+				
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						Integer.toString(function), fileName, response);
+						PipeMensageUtilites.create, fileName, response);
 				break;
 
 			case 1:
-
 				if (status)
-					response = "file removed";
+					response = PipeMensageUtilites.okRemove;
 				else
-					response = "file doesn't exist";
-
+					response = PipeMensageUtilites.failRemove;
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						Integer.toString(function), fileName, response);
-
+						PipeMensageUtilites.delete, fileName, response);
 				break;
 
 			case 2:
-
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						Integer.toString(function), fileName,
 						Integer.toString(receiver));
-
 				break;
-
 			case 3:
-
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						Integer.toString(function), fileName,
 						Integer.toString(where));
-
 				break;
-
 			case 4:
-
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.read, fileName,
@@ -226,7 +211,8 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						Integer.toString(-1), Integer.toString(receiver),
 						PipeMensageUtilites.open, fileName,
 						Integer.toString(sender));
-
+				
+				fileManager.insertFileInUse(fileName);
 				doConnection(msg, sender);
 				openConnection(msg, receiver);
 
@@ -244,17 +230,16 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						PipeMensageUtilites.open, fileName,
 						Integer.toString(sender));
 
+				fileManager.insertFileInUse(fileName);
 				doConnection(msg, sender);
 				openConnection(msg, receiver);
 				break;
 			}
-
+		
 			pipe.sendMessage(msg);
-			mensageArrive = false;
 		}
 
 		private boolean execution;
-		private boolean mensageArrive;
 		private JxtaBiDiPipe pipe;
 
 		private int sender;
@@ -262,7 +247,7 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		private int where;
 		private int function;
 		private String fileName;
-		private boolean status;
+		private boolean status;	
 	}
 
 	public void sendBroadCasting(Message msg, int myself) throws IOException {
@@ -285,6 +270,9 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 			IOException {
 		// TODO Auto-generated method stub
 		ServerFileSystem s = new ServerFileSystem();
+
+		while (true)
+			;
 	}
 
 }
