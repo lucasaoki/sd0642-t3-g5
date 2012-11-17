@@ -2,12 +2,12 @@ package centralNode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
+import net.jxta.discovery.DiscoveryService;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
 import net.jxta.exception.PeerGroupException;
+import net.jxta.id.IDFactory;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
@@ -20,6 +20,7 @@ import utilitesFileSystem.FileManager;
 import utilitesFileSystem.MsgFileSystem;
 import utilitesFileSystem.PeerGroupID;
 import utilitesFileSystem.PipeMensageUtilites;
+import advertisementFileFactory.FileAdvertisement;
 
 public class ServerFileSystem implements PeerGroupID, Runnable {
 
@@ -28,6 +29,8 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 	private PeerGroup netPeerGroup;
 	private JxtaServerPipe serverPipe;
 	private PipeAdvertisement serverPipeAdv;
+	// private FileAdvertisement fileAdv;
+	private DiscoveryService discovery;
 
 	private FileManager fileManager;
 	private MsgFileSystem mensageFileSystem;
@@ -37,6 +40,10 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 	private int numNodes;
 
 	ServerFileSystem() throws IOException, PeerGroupException {
+
+		AdvertisementFactory.registerAdvertisementInstance(
+				FileAdvertisement.getAdvertisementType(),
+				new FileAdvertisement.Instantiator());
 
 		executed = true;
 		numNodes = 0;
@@ -51,26 +58,47 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		manager.startNetwork();
 
 		netPeerGroup = manager.getNetPeerGroup();
+		discovery = netPeerGroup.getDiscoveryService();
 
-		serverPipeAdv = ServerFileSystem.getPipeAdvertisement();
-		serverPipe = new JxtaServerPipe(netPeerGroup, serverPipeAdv);
+//		serverPipeAdv = ServerFileSystem.getPipeAdvertisement();
+		// fileAdv = ServerFileSystem.getFileAdvertisement();
 
-		serverPipe.setPipeTimeout(0);
+		// serverPipe = new JxtaServerPipe(netPeerGroup, serverPipeAdv);
+		// serverPipe.setPipeTimeout(0);
 
-		Thread t = new Thread(this);
-		t.start();
+		// Thread t = new Thread(this);
+		// t.start();
 	}
 
-	public static PipeAdvertisement getPipeAdvertisement() {
+	public PipeAdvertisement getPipeAdvertisement() {
 
 		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
 				.newAdvertisement(PipeAdvertisement.getAdvertisementType());
 
-		advertisement.setPipeID(PeerGroupID.serverID);
+		// advertisement.setPipeID(PeerGroupID.serverID);
+		advertisement
+				.setPipeID(IDFactory
+						.newPipeID(net.jxta.peergroup.PeerGroupID.defaultNetPeerGroupID));
 		advertisement.setType(PipeService.UnicastType);
 		advertisement.setName("Server FileSystem");
 
 		return advertisement;
+	}
+
+	public static FileAdvertisement getFileAdvertisement() {
+
+		FileAdvertisement advertisement = (FileAdvertisement) AdvertisementFactory
+				.newAdvertisement(FileAdvertisement.getAdvertisementType());
+
+		// advertisement.setAdvertisementID(PeerGroupID.serverID);
+		advertisement
+				.setAdvertisementID(IDFactory
+						.newPipeID(net.jxta.peergroup.PeerGroupID.defaultNetPeerGroupID));
+		advertisement.setTheName("jaca");
+		advertisement.setOwner("Server FileSystem");
+
+		return advertisement;
+
 	}
 
 	// necessário para analisar as conexões que vão chegar
@@ -224,7 +252,7 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						Integer.toString(sender));
 
 				fileManager.insertFileInUse(fileName);
-				//doConnection(msg, sender);
+				// doConnection(msg, sender);
 				openConnection(openFile, receiver);
 
 				break;
@@ -241,19 +269,19 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 						Integer.toString(sender));
 
 				fileManager.insertFileInUse(fileName);
-				//doConnection(msg, sender);
+				// doConnection(msg, sender);
 				openConnection(openFile, receiver);
 				break;
-			case 8: //fechar o arquivo
-				if( status )
+			case 8: // fechar o arquivo
+				if (status)
 					response = PipeMensageUtilites.okclose;
 				else
 					response = PipeMensageUtilites.failclose;
-				
+
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.close, fileName, response);
-				
+
 				break;
 			}
 
@@ -287,12 +315,37 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 		bipipe[whoNeedOpen].sendMessage(msg);
 	}
 
+	public void publish() throws IOException, InterruptedException {
+		long lifetime = 60 * 2 * 10L;
+		long expiration = 60 * 2 * 10L;
+		long waittime = 60 * 3 * 10L;
+
+		while (true) {
+			PipeAdvertisement pipeAdv = this.getPipeAdvertisement();
+
+//			FileAdvertisement fileAdv = this.getFileAdvertisement();
+			// System.out.println(pipeAdv.toString());
+			discovery.publish(pipeAdv, lifetime, expiration);
+			discovery.remotePublish(pipeAdv, expiration);
+
+//			discovery.publish(fileAdv, lifetime, expiration);
+//			discovery.remotePublish(fileAdv, expiration);
+
+			// while(true);
+			Thread.sleep(waittime);
+		}
+	}
+
 	public static void main(String[] args) throws PeerGroupException,
 			IOException {
 		// TODO Auto-generated method stub
 		ServerFileSystem s = new ServerFileSystem();
-
-//		while (true);
+		try {
+			s.publish();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
