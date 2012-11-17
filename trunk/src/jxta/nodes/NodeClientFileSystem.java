@@ -22,21 +22,29 @@ import net.jxta.platform.NetworkConfigurator;
 import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.DiscoveryResponseMsg;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.util.JxtaBiDiPipe;
 
-public class NodeClientFileSystem implements DiscoveryListener {
+public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 
-	public static final int NUM_NODES = 10;
-
+//	public static final int NUM_NODES = 2;
+//	public static final int time_connection = 10000;
 	private NetworkManager manager;
 	private PeerGroup peerGroup;
+
 	private PipeAdvertisement myPipeAdv[];
 	private PipeAdvertisement pipeCentralAdv;
 	private PipeAdvertisement anotherPipeAdv[];
+
 	private DiscoveryService discovery;
+
 	private PipeService pipeService;
+	private JxtaBiDiPipe pipeToServer;
+
 	private InputPipe input[];
 	private OutputPipe output[];
+
 	private int nodeName;
+	private String delimenters = "[_]";
 
 	public NodeClientFileSystem(int nodeName) {
 
@@ -45,6 +53,8 @@ public class NodeClientFileSystem implements DiscoveryListener {
 		output = new OutputPipe[NUM_NODES];
 		myPipeAdv = new PipeAdvertisement[NUM_NODES];
 		anotherPipeAdv = new PipeAdvertisement[NUM_NODES];
+		pipeCentralAdv = null;
+		pipeToServer = null;
 
 		for (int i = 0; i < NUM_NODES; i++) {
 			input[i] = null;
@@ -65,6 +75,8 @@ public class NodeClientFileSystem implements DiscoveryListener {
 			manager.startNetwork();
 
 			peerGroup = manager.getNetPeerGroup();
+			peerGroup.getRendezVousService().setAutoStart(false);
+
 			discovery = peerGroup.getDiscoveryService();
 			pipeService = peerGroup.getPipeService();
 
@@ -153,7 +165,7 @@ public class NodeClientFileSystem implements DiscoveryListener {
 	}
 
 	@Override
-	public void discoveryEvent(DiscoveryEvent event) {
+	synchronized public void discoveryEvent(DiscoveryEvent event) {
 		// TODO Auto-generated method stub
 		DiscoveryResponseMsg res = event.getResponse();
 
@@ -161,19 +173,41 @@ public class NodeClientFileSystem implements DiscoveryListener {
 
 		while (e.hasMoreElements()) {
 			try {
-//				System.out.println("Aqui " + e.getClass().getName());
+				// System.out.println("Aqui " + e.getClass().getName());
 				PipeAdvertisement pipeAdv = (PipeAdvertisement) e.nextElement();
 
 				String name = pipeAdv.getName();
-				System.out.println(name);
 
+				String[] tokens = name.split(delimenters);
+				if (!tokens[0].equals("Server")) {
+					int firstDigit = Integer.parseInt(tokens[0]);
+					int secondDigit = Integer.parseInt(tokens[1]);
+
+					if (firstDigit != nodeName) {
+						if (secondDigit == nodeName) {
+							if (anotherPipeAdv[secondDigit] == null) {
+								anotherPipeAdv[secondDigit] = pipeAdv;
+							}
+						}
+					}
+				} else {
+					int secondDigit = Integer.parseInt(tokens[1]);
+					if ( (secondDigit == nodeName) && (pipeCentralAdv == null)) {
+						pipeCentralAdv = pipeAdv;
+						try {
+							pipeToServer = new JxtaBiDiPipe(peerGroup,
+									pipeCentralAdv, time_connection, new MsgListenerServer(), true);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+				}
 			} catch (ClassCastException cce) {
 				// TODO Auto-generated catch block
 				// e.printStackTrace();
 			}
-
 		}
-
 	}
 
 	class DiscoveryAdvertisementRunnable implements Runnable {
@@ -187,13 +221,11 @@ public class NodeClientFileSystem implements DiscoveryListener {
 		public void run() {
 			long waittime = 60 * 100L;
 			discovery.addDiscoveryListener(listener);
-//			discovery.getRemoteAdvertisements(null, DiscoveryService.ADV, null,
-//					null, 100, null);
-			// TODO Auto-generated method stub
+		
 			while (exec) {
 				System.out.println("Descobrindo PipeAdvetisement");
 				discovery.getRemoteAdvertisements(null, DiscoveryService.ADV,
-						"Name", null, NUM_NODES*10, null);
+						"Name", null, NUM_NODES * 10, null);
 				try {
 					Thread.sleep(waittime);
 				} catch (InterruptedException e) {
@@ -205,7 +237,6 @@ public class NodeClientFileSystem implements DiscoveryListener {
 
 		private boolean exec = true;
 		private DiscoveryListener listener;
-		// private DiscoveryService discovery;
 	}
 
 	class PublishAdvertisement implements Runnable {
@@ -244,13 +275,12 @@ public class NodeClientFileSystem implements DiscoveryListener {
 
 		Thread t1 = new Thread(new DiscoveryAdvertisementRunnable(this));
 		Thread t2 = new Thread(new PublishAdvertisement());
-
 		t1.start();
 		t2.start();
 	}
 
 	public static void main(String args[]) {
-		NodeClientFileSystem nc = new NodeClientFileSystem(1);
+		NodeClientFileSystem nc = new NodeClientFileSystem(0);
 		nc.start();
 
 		while (true)
