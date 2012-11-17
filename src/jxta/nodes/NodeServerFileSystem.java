@@ -9,18 +9,24 @@ import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.peergroup.PeerGroupID;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.util.JxtaBiDiPipe;
+import net.jxta.util.JxtaServerPipe;
 
-public class NodeServerFileSystem {
+public class NodeServerFileSystem implements UtilitesNodes {
 
-	private final int NUM_NODES = 5;
+	private final String name = "Server";
 	private NetworkManager manager;
 	private PeerGroup peerGroup;
 	private DiscoveryService discovery;
+	private PipeAdvertisement pipeNeighborhoodAdv[];
+	private JxtaBiDiPipe pipeToNeighborhood[];
 
-	private PipeAdvertisement getPipeAdvertisement() {
+	private PipeAdvertisement getPipeAdvertisement(int node) {
 
 		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
 				.newAdvertisement(PipeAdvertisement.getAdvertisementType());
@@ -28,7 +34,7 @@ public class NodeServerFileSystem {
 		advertisement.setPipeID(IDFactory
 				.newPipeID(PeerGroupID.defaultNetPeerGroupID));
 		advertisement.setType(PipeService.UnicastType);
-		advertisement.setName("Server");
+		advertisement.setName(name+"_"+Integer.toString(node));
 
 		return advertisement;
 	}
@@ -59,20 +65,50 @@ public class NodeServerFileSystem {
 		long waittime = 60 * 100L;
 		long expiration = 60 * 2 * 1000L;
 
-		PipeAdvertisement pipeAdv = getPipeAdvertisement();
+//		PipeAdvertisement pipeAdv = getPipeAdvertisement();
 		while (true) {
+//			try {
+////				discovery.publish(pipeAdv, lifetime, expiration);
+////				discovery.remotePublish(pipeAdv, expiration);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			discovery.remotePublish(pipeAdv, expiration);
+//			Thread.sleep(waittime);
+		}
+	}
+	
+	public void InitializeBiDiPipe(){
+		
+	}
+
+	class ConnectionToClient{
+
+		public ConnectionToClient(int index){
 			try {
-				discovery.publish(pipeAdv, lifetime, expiration);
-				discovery.remotePublish(pipeAdv, expiration);
+				this.index = index;
+				serverPipe = new JxtaServerPipe(peerGroup, pipeNeighborhoodAdv[index]);
+				serverPipe.setPipeTimeout(0);
+				pipeToNeighborhood[index] =  serverPipe.accept();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			discovery.remotePublish(pipeAdv, expiration);
-			Thread.sleep(waittime);
+		}
+		
+		private int index;
+		private JxtaServerPipe serverPipe;
+	}
+	
+	class ConnectionHandler implements PipeMsgListener{
+		@Override
+		public void pipeMsgEvent(PipeMsgEvent arg0) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
-
+	
 	public static void main(String args[]) throws InterruptedException {
 		NodeServerFileSystem ns = new NodeServerFileSystem();
 
