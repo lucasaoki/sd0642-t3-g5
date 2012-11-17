@@ -18,13 +18,14 @@ import net.jxta.pipe.OutputPipe;
 import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
+import net.jxta.platform.NetworkConfigurator;
 import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.DiscoveryResponseMsg;
 import net.jxta.protocol.PipeAdvertisement;
 
-public class NodeClientSystemFile {
+public class NodeClientFileSystem implements DiscoveryListener {
 
-	public static final int NUM_NODES = 1;
+	public static final int NUM_NODES = 10;
 
 	private NetworkManager manager;
 	private PeerGroup peerGroup;
@@ -37,7 +38,7 @@ public class NodeClientSystemFile {
 	private OutputPipe output[];
 	private int nodeName;
 
-	public NodeClientSystemFile(int nodeName) {
+	public NodeClientFileSystem(int nodeName) {
 
 		this.nodeName = nodeName;
 		input = new InputPipe[NUM_NODES];
@@ -53,9 +54,13 @@ public class NodeClientSystemFile {
 		}
 
 		try {
-			manager = new NetworkManager(NetworkManager.ConfigMode.RENDEZVOUS,
+			manager = new NetworkManager(NetworkManager.ConfigMode.EDGE,
 					Integer.toString(nodeName), new File(new File(".cache"),
 							Integer.toString(nodeName)).toURI());
+
+			NetworkConfigurator config = manager.getConfigurator();
+
+			config.setUseMulticast(true);
 
 			manager.startNetwork();
 
@@ -128,7 +133,7 @@ public class NodeClientSystemFile {
 			DiscoveryResponseMsg res = event.getResponse();
 
 			Enumeration<Advertisement> e = res.getAdvertisements();
-			// System.out.println(e.toString());
+			System.out.println(e.toString());
 
 			while (e.hasMoreElements()) {
 				try {
@@ -137,34 +142,58 @@ public class NodeClientSystemFile {
 							.nextElement();
 
 					String name = pipeAdv.getName();
-					System.out.println(name);
+					System.out.println(pipeAdv.toString());
 
 				} catch (ClassCastException cce) {
 					// TODO Auto-generated catch block
 					// e.printStackTrace();
 				}
-
 			}
 		}
 	}
 
+	@Override
+	public void discoveryEvent(DiscoveryEvent event) {
+		// TODO Auto-generated method stub
+		DiscoveryResponseMsg res = event.getResponse();
+
+		Enumeration<Advertisement> e = res.getAdvertisements();
+
+		while (e.hasMoreElements()) {
+			try {
+//				System.out.println("Aqui " + e.getClass().getName());
+				PipeAdvertisement pipeAdv = (PipeAdvertisement) e.nextElement();
+
+				String name = pipeAdv.getName();
+				System.out.println(name);
+
+			} catch (ClassCastException cce) {
+				// TODO Auto-generated catch block
+				// e.printStackTrace();
+			}
+
+		}
+
+	}
+
 	class DiscoveryAdvertisementRunnable implements Runnable {
 
-		// public DiscoveryAdvertisementRunnable(DiscoveryService discovery) {
-		// // TODO Auto-generated constructor stub
-		// this.discovery = discovery;
-		// }
+		public DiscoveryAdvertisementRunnable(DiscoveryListener listener) {
+			// TODO Auto-generated constructor stub
+			this.listener = listener;
+		}
 
 		@Override
 		public void run() {
 			long waittime = 60 * 100L;
-			discovery
-					.addDiscoveryListener(new DiscoveryAdvertisementListener());
+			discovery.addDiscoveryListener(listener);
+//			discovery.getRemoteAdvertisements(null, DiscoveryService.ADV, null,
+//					null, 100, null);
 			// TODO Auto-generated method stub
 			while (exec) {
 				System.out.println("Descobrindo PipeAdvetisement");
 				discovery.getRemoteAdvertisements(null, DiscoveryService.ADV,
-						"Name", "_"+Integer.toString(nodeName), 10, null);
+						"Name", null, NUM_NODES*10, null);
 				try {
 					Thread.sleep(waittime);
 				} catch (InterruptedException e) {
@@ -175,28 +204,24 @@ public class NodeClientSystemFile {
 		}
 
 		private boolean exec = true;
+		private DiscoveryListener listener;
 		// private DiscoveryService discovery;
 	}
 
 	class PublishAdvertisement implements Runnable {
 
-		// public PublishAdvertisement(DiscoveryService discovery, int num,
-		// PipeAdvertisement myPipeAdv[]) {
-		// this.discovery = discovery;
-		// this.NUM_NODES = num;
-		// this.myPipeAdv = myPipeAdv;
-		// }
-
 		@Override
 		public void run() {
 			long lifetime = 60 * 2 * 1000L;
-			long waittime = 60 * 100L;
+			long waittime = 60 * 3 * 1000L;
 			long expiration = 60 * 2 * 1000L;
+
 			// TODO Auto-generated method stub
 			while (exec) {
 				try {
 					System.out.println("Informado PipeAdvetisement");
 					for (int i = 0; i < NUM_NODES; i++) {
+						// System.out.println(myPipeAdv[i].toString());
 						discovery.publish(myPipeAdv[i], lifetime, expiration);
 						discovery.remotePublish(myPipeAdv[i], expiration);
 					}
@@ -211,14 +236,13 @@ public class NodeClientSystemFile {
 			}
 		}
 
-		//
 		private boolean exec = true;
 	}
 
 	public void start() {
 		initiliazeInputPipe();
 
-		Thread t1 = new Thread(new DiscoveryAdvertisementRunnable());
+		Thread t1 = new Thread(new DiscoveryAdvertisementRunnable(this));
 		Thread t2 = new Thread(new PublishAdvertisement());
 
 		t1.start();
@@ -226,10 +250,11 @@ public class NodeClientSystemFile {
 	}
 
 	public static void main(String args[]) {
-		NodeClientSystemFile nc = new NodeClientSystemFile(1);
+		NodeClientFileSystem nc = new NodeClientFileSystem(1);
 		nc.start();
 
 		while (true)
 			;
 	}
+
 }
