@@ -24,10 +24,8 @@ import net.jxta.protocol.DiscoveryResponseMsg;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.util.JxtaBiDiPipe;
 
-public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
+public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes {
 
-//	public static final int NUM_NODES = 2;
-//	public static final int time_connection = 10000;
 	private NetworkManager manager;
 	private PeerGroup peerGroup;
 
@@ -69,7 +67,6 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 							Integer.toString(nodeName)).toURI());
 
 			NetworkConfigurator config = manager.getConfigurator();
-
 			config.setUseMulticast(true);
 
 			manager.startNetwork();
@@ -90,6 +87,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 
 	}
 
+	/*
+	 * Inicializa os advertisement para fazer comunicação com demais nós
+	 * juntamente com o inputPipe para receber comunicação externa
+	 */
 	public void initiliazeInputPipe() {
 		for (int i = 0; i < NUM_NODES; i++) {
 			String str = Integer.toString(nodeName) + "_" + Integer.toString(i);
@@ -106,6 +107,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		}
 	}
 
+	/**
+	 * Cria um Advertisemente para informar da existencia desse nó. Necessário
+	 * para que outros pipe se comuniquem
+	 * **/
 	private PipeAdvertisement getPipeAdvertisement(String nodeName) {
 
 		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
@@ -119,6 +124,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		return advertisement;
 	}
 
+	/*
+	 * Responsavel pela comunicação com os demais nó quando uma mensagem chega a
+	 * ele, a mesma é atendida através dessa classe
+	 */
 	class MsgListenerNodes implements PipeMsgListener {
 
 		@Override
@@ -128,6 +137,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		}
 	}
 
+	/*
+	 * Responsavel pela comunicação com o nó Servidor quando uma mensagem chega
+	 * a ele, a mesma é atendida através dessa classe
+	 */
 	class MsgListenerServer implements PipeMsgListener {
 
 		@Override
@@ -137,33 +150,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		}
 	}
 
-	class DiscoveryAdvertisementListener implements DiscoveryListener {
-
-		@Override
-		public void discoveryEvent(DiscoveryEvent event) {
-			// TODO Auto-generated method stub
-			DiscoveryResponseMsg res = event.getResponse();
-
-			Enumeration<Advertisement> e = res.getAdvertisements();
-			System.out.println(e.toString());
-
-			while (e.hasMoreElements()) {
-				try {
-					// System.out.println("Aqui "); //entrando aqui o bixo esta
-					PipeAdvertisement pipeAdv = (PipeAdvertisement) e
-							.nextElement();
-
-					String name = pipeAdv.getName();
-					System.out.println(pipeAdv.toString());
-
-				} catch (ClassCastException cce) {
-					// TODO Auto-generated catch block
-					// e.printStackTrace();
-				}
-			}
-		}
-	}
-
+	/*
+	 * Metodo Responsavel pela descoberta do servidor e dos outros nós Todo
+	 * Advertsement que chega do tipo Pipe ele tenta processar
+	 */
 	@Override
 	synchronized public void discoveryEvent(DiscoveryEvent event) {
 		// TODO Auto-generated method stub
@@ -177,8 +167,8 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 				PipeAdvertisement pipeAdv = (PipeAdvertisement) e.nextElement();
 
 				String name = pipeAdv.getName();
-
 				String[] tokens = name.split(delimenters);
+
 				if (!tokens[0].equals("Server")) {
 					int firstDigit = Integer.parseInt(tokens[0]);
 					int secondDigit = Integer.parseInt(tokens[1]);
@@ -191,12 +181,14 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 						}
 					}
 				} else {
+
 					int secondDigit = Integer.parseInt(tokens[1]);
-					if ( (secondDigit == nodeName) && (pipeCentralAdv == null)) {
+					if ((secondDigit == nodeName) && (pipeCentralAdv == null)) {
 						pipeCentralAdv = pipeAdv;
 						try {
 							pipeToServer = new JxtaBiDiPipe(peerGroup,
-									pipeCentralAdv, time_connection, new MsgListenerServer(), true);
+									pipeCentralAdv, time_connection,
+									new MsgListenerServer(), true);
 						} catch (IOException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
@@ -210,6 +202,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		}
 	}
 
+	/*
+	 * Classe Responsavel por ficar ouvidno a rede a procura de novos
+	 * Advertisement
+	 */
 	class DiscoveryAdvertisementRunnable implements Runnable {
 
 		public DiscoveryAdvertisementRunnable(DiscoveryListener listener) {
@@ -221,7 +217,7 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		public void run() {
 			long waittime = 60 * 100L;
 			discovery.addDiscoveryListener(listener);
-		
+
 			while (exec) {
 				System.out.println("Descobrindo PipeAdvetisement");
 				discovery.getRemoteAdvertisements(null, DiscoveryService.ADV,
@@ -239,6 +235,10 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		private DiscoveryListener listener;
 	}
 
+	/*
+	 * Classe Responsavel por ficar enviando dados na rede sobre os
+	 * Advertisement pertencentes a esse nó
+	 */
 	class PublishAdvertisement implements Runnable {
 
 		@Override
@@ -270,6 +270,9 @@ public class NodeClientFileSystem implements DiscoveryListener,UtilitesNodes {
 		private boolean exec = true;
 	}
 
+	/*
+	 * Começa toda a cadeia produtiva dos nos
+	 */
 	public void start() {
 		initiliazeInputPipe();
 
