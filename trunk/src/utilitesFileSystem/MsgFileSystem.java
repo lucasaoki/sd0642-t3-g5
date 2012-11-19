@@ -3,7 +3,8 @@ package utilitesFileSystem;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.StringMessageElement;
 
-public class MsgFileSystem implements PipeMensageUtilites {
+public class MsgFileSystem implements PipeMensageUtilites,
+		UtilitesMsgFileSystem {
 
 	public static void addStringToMessage(Message message, String nameSpace,
 			String elemName, String string) {
@@ -37,24 +38,22 @@ public class MsgFileSystem implements PipeMensageUtilites {
 				PipeMensageUtilites.function).toString();
 
 		if (function.equals(PipeMensageUtilites.create))
-			return 0;
+			return CREATE_MSG;
 		if (function.equals(PipeMensageUtilites.delete))
-			return 1;
+			return DELETE_MSG;
 		if (function.equals(PipeMensageUtilites.move))
-			return 2;
-		if (function.equals(PipeMensageUtilites.where))
-			return 3;
+			return MOVE_MSG;
 		if (function.equals(PipeMensageUtilites.read))
-			return 4;
+			return READ_MSG;
 		if (function.equals(PipeMensageUtilites.write))
-			return 5;
-		if (function.equals(PipeMensageUtilites.open))
-			return 6;
-		if (function.equals(PipeMensageUtilites.receiveFile))
-			return 7;
-		if (function.equals(PipeMensageUtilites.close))
-			return 8;
-		
+			return WRITE_MSG;
+
+		// exclusivas dos nos clientes
+		if (function.equals(PipeMensageUtilites.sendFile))
+			return SEND_FILE;
+		if (function.equals(PipeMensageUtilites.moveFile))
+			return MOVE_FILE;
+
 		return response;
 	}
 
@@ -83,12 +82,12 @@ public class MsgFileSystem implements PipeMensageUtilites {
 		return response;
 	}
 
-	public String getResponseFromMessage(Message message){
+	public String getResponseFromMessage(Message message) {
 		String response = message.getMessageElement(null,
 				PipeMensageUtilites.response).toString();
 		return response;
 	}
-	
+
 	public String getFileNameFromMessage(Message message) {
 		String fileName = message.getMessageElement(null,
 				PipeMensageUtilites.fileName).toString();

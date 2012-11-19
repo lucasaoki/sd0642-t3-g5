@@ -3,11 +3,19 @@ package jxta.nodes;
 import java.io.File;
 import java.io.IOException;
 
+import utilitesFileSystem.FileManager;
+import utilitesFileSystem.MsgFileSystem;
+import utilitesFileSystem.PipeMensageUtilites;
+import utilitesFileSystem.UtilitesMsgFileSystem;
+
 import net.jxta.discovery.DiscoveryService;
 import net.jxta.document.AdvertisementFactory;
+import net.jxta.endpoint.Message;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
+import net.jxta.impl.shell.bin.pse.createkey;
 import net.jxta.impl.shell.bin.remotepublish.remotepublish;
+import net.jxta.impl.util.pipe.reliable.ReliableInputStream.MsgListener;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.peergroup.PeerGroupID;
 import net.jxta.pipe.PipeMsgEvent;
@@ -19,7 +27,8 @@ import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.util.JxtaBiDiPipe;
 import net.jxta.util.JxtaServerPipe;
 
-public class NodeServerFileSystem implements UtilitesNodes {
+public class NodeServerFileSystem implements UtilitesNodes,
+		UtilitesMsgFileSystem {
 
 	private final String name = "Server";
 	private NetworkManager manager;
@@ -27,26 +36,14 @@ public class NodeServerFileSystem implements UtilitesNodes {
 	private DiscoveryService discovery;
 	private PipeAdvertisement pipeNeighborhoodAdv[];
 	private JxtaBiDiPipe pipeToNeighborhood[];
-
-	/**
-	 * Cria um Advertisemente para informar da existencia desse nó. Necessário
-	 * para que outros clientes se comunique com o Servidor.
-	 * **/
-	private PipeAdvertisement getPipeAdvertisement(int node) {
-
-		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
-				.newAdvertisement(PipeAdvertisement.getAdvertisementType());
-
-		advertisement.setPipeID(IDFactory
-				.newPipeID(PeerGroupID.defaultNetPeerGroupID));
-		advertisement.setType(PipeService.UnicastType);
-		advertisement.setName(name + "_" + Integer.toString(node));
-
-		return advertisement;
-	}
+	private MsgFileSystem msgFileSystem;
+	private FileManager fileManager;
 
 	public NodeServerFileSystem() {
 		try {
+
+			fileManager = new FileManager();
+			msgFileSystem = new MsgFileSystem();
 
 			pipeToNeighborhood = new JxtaBiDiPipe[NUM_NODES];
 			pipeNeighborhoodAdv = new PipeAdvertisement[NUM_NODES];
@@ -80,10 +77,26 @@ public class NodeServerFileSystem implements UtilitesNodes {
 		}
 	}
 
+	/**
+	 * Cria um Advertisemente para informar da existencia desse nó. Necessário
+	 * para que outros clientes se comunique com o Servidor.
+	 * **/
+	private PipeAdvertisement getPipeAdvertisement(int node) {
+
+		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
+				.newAdvertisement(PipeAdvertisement.getAdvertisementType());
+
+		advertisement.setPipeID(IDFactory
+				.newPipeID(PeerGroupID.defaultNetPeerGroupID));
+		advertisement.setType(PipeService.UnicastType);
+		advertisement.setName(name + "_" + Integer.toString(node));
+
+		return advertisement;
+	}
+
 	/*
-	 * Responsavel pelo inicio da cadeia produtiva no 
-	 * Server.
-	 * */
+	 * Responsavel pelo inicio da cadeia produtiva no Server.
+	 */
 	public void start() throws InterruptedException {
 		InitializeBiDiPipe();
 
@@ -97,10 +110,9 @@ public class NodeServerFileSystem implements UtilitesNodes {
 	}
 
 	/*
-	 * Inicializa os Advertisement
-	 * para os nós clientes saberem da existência 
-	 * do nó central.
-	 * */	
+	 * Inicializa os Advertisement para os nós clientes saberem da existência do
+	 * nó central.
+	 */
 	private void InitializeBiDiPipe() {
 		for (int i = 0; i < NUM_NODES; i++) {
 			pipeNeighborhoodAdv[i] = getPipeAdvertisement(i);
@@ -108,9 +120,8 @@ public class NodeServerFileSystem implements UtilitesNodes {
 	}
 
 	/*
-	 * Classe Responsavel pela 
-	 * conexão entre o servidor e o Cliente
-	 * */
+	 * Classe Responsavel pela conexão entre o servidor e o Cliente
+	 */
 	class ConnectionToClient implements Runnable {
 
 		private int index;
@@ -136,17 +147,18 @@ public class NodeServerFileSystem implements UtilitesNodes {
 				Thread t = new Thread(new ConnectionHandler(
 						pipeToNeighborhood[index]));
 				t.start();
+				System.out.println("Client " + Integer.toString(index)
+						+ " conectado");
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	/*
-	 * Classe Responsavel pela
-	 * comunicação entre servidor e cliente
-	 * */
+	 * Classe Responsavel pela comunicação entre servidor e cliente
+	 */
 	class ConnectionHandler implements PipeMsgListener, Runnable {
 
 		private JxtaBiDiPipe pipe;
@@ -156,12 +168,94 @@ public class NodeServerFileSystem implements UtilitesNodes {
 			this.pipe = pipe;
 			pipe.setMessageListener(this);
 			executed = true;
+
+			Thread t = new Thread(this);
+			t.start();
 		}
 
 		@Override
 		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
 			// TODO Auto-generated method stub
+			Message msg = event.getMessage();
 
+			int sender = 0;
+			int receiver = 0;
+			int function = 0;
+			boolean status = false;
+			String fileName = null;
+
+			function = msgFileSystem.functionFromMessage(msg);
+			if (function >= 0) {
+				sender = msgFileSystem.getSenderFromMessage(msg);
+				receiver = msgFileSystem.getReceiverFromMessage(msg);
+				fileName = msgFileSystem.getFileNameFromMessage(msg);
+			}
+			switch (function) {
+			case CREATE_MSG:
+				status = fileManager.InsertFileNode(sender, fileName);
+				break;
+			case DELETE_MSG:
+				status = fileManager.RemoveFileNode(sender, fileName);
+				break;
+			case MOVE_MSG:
+				status = fileManager.MoveFileBetweenNodes(receiver, sender,
+						fileName);
+				break;
+			}
+			
+			sendMessage(function,sender,receiver,fileName,status);
+		}
+
+		synchronized void sendMessage(int function, int sender, int receiver,
+				String fileName,boolean status) {
+			Message msg = new Message();
+			String response;
+
+			switch (function) {
+				
+			case CREATE_MSG:
+				
+				if (status)
+					response = PipeMensageUtilites.okCreate;
+				else
+					response = PipeMensageUtilites.failCreate;
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+						Integer.toString(-1), Integer.toString(sender),
+						PipeMensageUtilites.create, fileName, response);
+				break;
+				
+			case DELETE_MSG:
+				
+				if (status)
+					response = PipeMensageUtilites.okRemove;
+				else
+					response = PipeMensageUtilites.failRemove;
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+						Integer.toString(-1), Integer.toString(sender),
+						PipeMensageUtilites.delete, fileName, response);
+				break;
+			
+
+			case MOVE_MSG:
+				//falta criar a lógica aqui para funcionar
+				break;
+				
+			case READ_MSG:	
+				// falta criar a lógica aqui para funcionar
+				break;
+			case WRITE_MSG:
+				//falta criar a lógica aqui para funcionar
+				break;
+			}
+			
+			try {
+				pipe.sendMessage(msg);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		@Override
@@ -179,9 +273,9 @@ public class NodeServerFileSystem implements UtilitesNodes {
 	}
 
 	/*
-	 * Classe Responsavel pela publicação
-	 * dos advertisement referentes ao no central.
-	 * */
+	 * Classe Responsavel pela publicação dos advertisement referentes ao no
+	 * central.
+	 */
 	class PublishAdvertisement implements Runnable {
 
 		@Override

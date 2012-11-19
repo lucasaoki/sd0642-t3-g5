@@ -3,6 +3,8 @@ package centralNode;
 import java.io.File;
 import java.io.IOException;
 
+import jxta.nodes.UtilitesNodes;
+
 import net.jxta.discovery.DiscoveryService;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
@@ -22,7 +24,7 @@ import utilitesFileSystem.PeerGroupID;
 import utilitesFileSystem.PipeMensageUtilites;
 import advertisementFileFactory.FileAdvertisement;
 
-public class ServerFileSystem implements PeerGroupID, Runnable {
+public class ServerFileSystem implements PeerGroupID, Runnable, UtilitesNodes {
 
 	private final File home;
 	private NetworkManager manager;
@@ -104,8 +106,8 @@ public class ServerFileSystem implements PeerGroupID, Runnable {
 	// necessário para analisar as conexões que vão chegar
 	public void run() {
 
-		bipipe = new JxtaBiDiPipe[FileManager.NUM_MAX_NODE];
-		while (executed && numNodes < FileManager.NUM_MAX_NODE) {
+		bipipe = new JxtaBiDiPipe[FileManager.NUM_NODES];
+		while (executed && numNodes < FileManager.NUM_NODES) {
 			try {
 				bipipe[numNodes] = serverPipe.accept();
 				if (bipipe[numNodes] != null) {

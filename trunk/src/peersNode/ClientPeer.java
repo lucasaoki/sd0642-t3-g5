@@ -60,7 +60,7 @@ public class ClientPeer implements PipeMsgListener {
             if (waitForRendezvous) {
                 manager.waitForRendezvousConnection(0);
             }
-            pipe.connect(netPeerGroup, null, ServerFileSystem.getPipeAdvertisement(), 60000, this);
+//            pipe.connect(netPeerGroup, null, ServerFileSystem.getPipeAdvertisement(), 60000, this);
             System.out.println("[+]JXTA BiDiPipe pipe created");
             waitUntilCompleted();
 
