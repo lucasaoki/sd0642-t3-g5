@@ -2,17 +2,17 @@ package utilitesFileSystem;
 
 import java.util.Vector;
 
-public class FileManager {
+import jxta.nodes.UtilitesNodes;
 
-	public final static int NUM_MAX_NODE = 15;
-	@SuppressWarnings("rawtypes")
+public class FileManager implements UtilitesNodes{
+
 	private Vector[] fileNames;
 	private Vector<String> filesInUse;
 	
 	public FileManager() {
 
-		fileNames = new Vector[NUM_MAX_NODE];
-		for (int i = 0; i < NUM_MAX_NODE; i++)
+		fileNames = new Vector[NUM_NODES];
+		for (int i = 0; i < NUM_NODES; i++)
 			fileNames[i] = new Vector<String>();
 
 		filesInUse = new Vector<String>();
@@ -21,7 +21,7 @@ public class FileManager {
 	public int FileNodePosition(String fileName) {
 		int response = -1;
 
-		for (int i = 0; i < NUM_MAX_NODE; i++)
+		for (int i = 0; i < NUM_NODES; i++)
 			if (fileNames[i].contains(fileName))
 				return i;
 
@@ -31,7 +31,7 @@ public class FileManager {
 	@SuppressWarnings("unchecked")
 	public boolean InsertFileNode(int node, String fileName) {
 
-		if (node >= 0 && node < NUM_MAX_NODE && FileNodePosition(fileName) < 0) {
+		if (node >= 0 && node < NUM_NODES && FileNodePosition(fileName) < 0) {
 			fileNames[node].add(fileName);
 			return true;
 		}
@@ -41,7 +41,7 @@ public class FileManager {
 
 	public boolean RemoveFileNode(int node, String fileName) {
 
-		if (node >= 0 && node < NUM_MAX_NODE 
+		if (node >= 0 && node < NUM_NODES 
 				&& !FileInUse(fileName) && FileNodePosition(fileName) >= 0 ) {
 			fileNames[node].remove(fileName);
 			return true;
