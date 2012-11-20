@@ -18,9 +18,13 @@ public interface PipeMensageUtilites {
 	public final static String move = "moveFile"; 
 	public final static String read = "readFile";
 	public final static String write = "writeFile";
-	public final static String sendFile = "sendFile";
+	
+	//Operações para os nós
+	public final static String readFile = "readFile";
 	public final static String moveFile = "moveFile";
-
+	public final static String writeFile = "writeFile";
+	public final static String deleteFile = "deleteFile";
+	
 	// Nome do arquivo para funcionamento
 	public final static String fileName = "fileName";
 
