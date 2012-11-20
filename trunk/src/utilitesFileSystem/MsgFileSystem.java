@@ -49,8 +49,12 @@ public class MsgFileSystem implements PipeMensageUtilites,
 			return WRITE_MSG;
 
 		// exclusivas dos nos clientes
-		if (function.equals(PipeMensageUtilites.sendFile))
-			return SEND_FILE;
+		if (function.equals(PipeMensageUtilites.readFile))
+			return READ_FILE;
+		if (function.equals(PipeMensageUtilites.writeFile))
+			return WRITE_FILE;
+		if (function.equals(PipeMensageUtilites.deleteFile))
+			return DELETE_FILE;
 		if (function.equals(PipeMensageUtilites.moveFile))
 			return MOVE_FILE;
 

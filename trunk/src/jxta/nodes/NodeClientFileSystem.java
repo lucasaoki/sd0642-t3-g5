@@ -4,11 +4,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Enumeration;
 
+import utilitesFileSystem.MsgFileSystem;
+import utilitesFileSystem.PipeMensageUtilites;
+import utilitesFileSystem.UtilitesMsgFileSystem;
+
 import net.jxta.discovery.DiscoveryEvent;
 import net.jxta.discovery.DiscoveryListener;
 import net.jxta.discovery.DiscoveryService;
 import net.jxta.document.Advertisement;
 import net.jxta.document.AdvertisementFactory;
+import net.jxta.endpoint.Message;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
 import net.jxta.peergroup.PeerGroup;
@@ -23,8 +28,10 @@ import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.DiscoveryResponseMsg;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.util.JxtaBiDiPipe;
+import net.jxta.util.PipeUtilities;
 
-public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes {
+public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
+		UtilitesMsgFileSystem {
 
 	private NetworkManager manager;
 	private PeerGroup peerGroup;
@@ -44,7 +51,11 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes {
 	private int nodeName;
 	private String delimenters = "[_]";
 
+	private MsgFileSystem msgFileSystem;
+
 	public NodeClientFileSystem(int nodeName) {
+
+		msgFileSystem = new MsgFileSystem();
 
 		this.nodeName = nodeName;
 		input = new InputPipe[NUM_NODES];
@@ -131,9 +142,22 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes {
 	class MsgListenerNodes implements PipeMsgListener {
 
 		@Override
-		public void pipeMsgEvent(PipeMsgEvent arg0) {
+		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
 			// TODO Auto-generated method stub
+			Message msg = event.getMessage();
 
+			// as únicas funcoes que os clientes trocam, é ler
+			// de um outro arquivo e atualizar o 
+			int function = msgFileSystem.functionFromMessage(msg);
+			
+			switch(function){
+			case READ_FILE:
+				break;	
+				
+			case WRITE_FILE:
+				break;
+			}
+			
 		}
 	}
 
@@ -144,9 +168,45 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes {
 	class MsgListenerServer implements PipeMsgListener {
 
 		@Override
-		public void pipeMsgEvent(PipeMsgEvent arg0) {
+		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
 			// TODO Auto-generated method stub
+			Message msg = event.getMessage();
+			String response = null;
 
+			int function = msgFileSystem.functionFromMessage(msg);
+
+			switch (function) {
+			case CREATE_MSG:
+				response = msgFileSystem.getResponseFromMessage(msg);
+				if (response.equals(PipeMensageUtilites.okCreate)) {
+
+				} else {
+
+				}
+
+				break;
+
+			case DELETE_MSG:
+				response = msgFileSystem.getResponseFromMessage(msg);
+				if (response.equals(PipeMensageUtilites.okRemove)) {
+
+				} else {
+
+				}
+				break;
+
+			case READ_MSG:
+				response = msgFileSystem.getResponseFromMessage(msg);
+				// vai receber e reenviar a mensagem para o no correto
+				// esta no campo sender?
+				break;
+
+			case WRITE_MSG:
+				response = msgFileSystem.getResponseFromMessage(msg);
+				// Para quem tem q enviar o e atualizar o
+				// arquivo
+				break;
+			}
 		}
 	}
 

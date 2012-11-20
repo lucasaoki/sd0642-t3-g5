@@ -202,19 +202,21 @@ public class NodeServerFileSystem implements UtilitesNodes,
 						fileName);
 				break;
 			}
-			
-			sendMessage(function,sender,receiver,fileName,status);
+
+			sendMessage(function, sender, receiver, fileName, status);
 		}
 
 		synchronized void sendMessage(int function, int sender, int receiver,
-				String fileName,boolean status) {
+				String fileName, boolean status) {
+
 			Message msg = new Message();
 			String response;
+			int node = 0;
 
 			switch (function) {
-				
+
 			case CREATE_MSG:
-				
+
 				if (status)
 					response = PipeMensageUtilites.okCreate;
 				else
@@ -224,32 +226,57 @@ public class NodeServerFileSystem implements UtilitesNodes,
 						Integer.toString(-1), Integer.toString(sender),
 						PipeMensageUtilites.create, fileName, response);
 				break;
-				
+
 			case DELETE_MSG:
-				
+
 				if (status)
 					response = PipeMensageUtilites.okRemove;
 				else
 					response = PipeMensageUtilites.failRemove;
 
+				node = fileManager.FileNodePosition(fileName);
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+						Integer.toString(-1), Integer.toString(node),
+						PipeMensageUtilites.delete, fileName, response);
+
+				try {
+					pipeToNeighborhood[node].sendMessage(msg);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				break;
+
+			case READ_MSG:
+
+				response = "send file to";
+
+				node = fileManager.FileNodePosition(fileName);
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+						Integer.toString(sender), Integer.toString(node),
+						PipeMensageUtilites.delete, fileName, response);
+
+				try {
+					pipeToNeighborhood[node].sendMessage(msg);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				break;
+
+			case WRITE_MSG:
+				node = fileManager.FileNodePosition(fileName);
+
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						PipeMensageUtilites.delete, fileName, response);
-				break;
-			
-
-			case MOVE_MSG:
-				//falta criar a lógica aqui para funcionar
-				break;
+						PipeMensageUtilites.delete, fileName, Integer.toString(node));
 				
-			case READ_MSG:	
-				// falta criar a lógica aqui para funcionar
-				break;
-			case WRITE_MSG:
-				//falta criar a lógica aqui para funcionar
 				break;
 			}
-			
+
 			try {
 				pipe.sendMessage(msg);
 			} catch (IOException e) {
