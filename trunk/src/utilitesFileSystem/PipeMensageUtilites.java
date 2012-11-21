@@ -27,6 +27,8 @@ public interface PipeMensageUtilites {
 	
 	// Nome do arquivo para funcionamento
 	public final static String fileName = "fileName";
+        
+        public final static String stream = "stream";
 
 	// Respostas e Perguntas
 	public final static String response = "serverResponse";
