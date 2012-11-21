@@ -15,9 +15,6 @@ import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
-import net.jxta.impl.shell.bin.pse.createkey;
-import net.jxta.impl.shell.bin.remotepublish.remotepublish;
-import net.jxta.impl.util.pipe.reliable.ReliableInputStream.MsgListener;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.peergroup.PeerGroupID;
 import net.jxta.pipe.PipeMsgEvent;
@@ -29,158 +26,157 @@ import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.util.JxtaBiDiPipe;
 import net.jxta.util.JxtaServerPipe;
 
-public class NodeServerFileSystem implements UtilitesNodes,
-		UtilitesMsgFileSystem {
+public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSystem {
 
-	private final String name = "Server";
-	private NetworkManager manager;
-	private PeerGroup peerGroup;
-	private DiscoveryService discovery;
-	private PipeAdvertisement pipeNeighborhoodAdv[];
-	private JxtaBiDiPipe pipeToNeighborhood[];
-	private MsgFileSystem msgFileSystem;
-	private FileManager fileManager;
+    private final String name = "Server";
+    private NetworkManager manager;
+    private PeerGroup peerGroup;
+    private DiscoveryService discovery;
+    private PipeAdvertisement pipeNeighborhoodAdv[];
+    private JxtaBiDiPipe pipeToNeighborhood[];
+    private MsgFileSystem msgFileSystem;
+    private FileManager fileManager;
 
-	public NodeServerFileSystem() {
-		try {
+    public NodeServerFileSystem() {
+        try {
 
 			Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
 
 			fileManager = new FileManager();
 			msgFileSystem = new MsgFileSystem();
 
-			pipeToNeighborhood = new JxtaBiDiPipe[NUM_NODES];
-			pipeNeighborhoodAdv = new PipeAdvertisement[NUM_NODES];
+            pipeToNeighborhood = new JxtaBiDiPipe[NUM_NODES];
+            pipeNeighborhoodAdv = new PipeAdvertisement[NUM_NODES];
 
-			for (int i = 0; i < NUM_NODES; i++) {
-				pipeToNeighborhood[i] = null;
-				pipeNeighborhoodAdv[i] = null;
-			}
+            for (int i = 0; i < NUM_NODES; i++) {
+                pipeToNeighborhood[i] = null;
+                pipeNeighborhoodAdv[i] = null;
+            }
 
-			manager = new NetworkManager(NetworkManager.ConfigMode.EDGE,
-					"Server FileSystem",
-					new File(new File(".cache"), "Server").toURI());
+            manager = new NetworkManager(NetworkManager.ConfigMode.EDGE,
+                    "Server FileSystem",
+                    new File(new File(".cache"), "Server").toURI());
 
-			// Permite q ele veja a própria rede
-			NetworkConfigurator config = manager.getConfigurator();
-			config.setUseMulticast(true);
+            // Permite q ele veja a própria rede
+            NetworkConfigurator config = manager.getConfigurator();
+            config.setUseMulticast(true);
 
-			manager.startNetwork();
+            manager.startNetwork();
 
-			peerGroup = manager.getNetPeerGroup();
-			// não deixa o nó virar Rendezvous
-			peerGroup.getRendezVousService().setAutoStart(false);
-			discovery = peerGroup.getDiscoveryService();
+            peerGroup = manager.getNetPeerGroup();
+            // não deixa o nó virar Rendezvous
+            peerGroup.getRendezVousService().setAutoStart(false);
+            discovery = peerGroup.getDiscoveryService();
 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (PeerGroupException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (PeerGroupException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 
-	/**
-	 * Cria um Advertisemente para informar da existencia desse nó. Necessário
-	 * para que outros clientes se comunique com o Servidor.
-	 * **/
-	private PipeAdvertisement getPipeAdvertisement(int node) {
+    /**
+     * Cria um Advertisemente para informar da existencia desse nó. Necessário
+     * para que outros clientes se comunique com o Servidor. *
+     */
+    private PipeAdvertisement getPipeAdvertisement(int node) {
 
-		PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
-				.newAdvertisement(PipeAdvertisement.getAdvertisementType());
+        PipeAdvertisement advertisement = (PipeAdvertisement) AdvertisementFactory
+                .newAdvertisement(PipeAdvertisement.getAdvertisementType());
 
-		advertisement.setPipeID(IDFactory
-				.newPipeID(PeerGroupID.defaultNetPeerGroupID));
-		advertisement.setType(PipeService.UnicastType);
-		advertisement.setName(name + "_" + Integer.toString(node));
+        advertisement.setPipeID(IDFactory
+                .newPipeID(PeerGroupID.defaultNetPeerGroupID));
+        advertisement.setType(PipeService.UnicastType);
+        advertisement.setName(name + "_" + Integer.toString(node));
 
-		return advertisement;
-	}
+        return advertisement;
+    }
 
-	/*
-	 * Responsavel pelo inicio da cadeia produtiva no Server.
-	 */
-	public void start() throws InterruptedException {
-		InitializeBiDiPipe();
+    /*
+     * Responsavel pelo inicio da cadeia produtiva no Server.
+     */
+    public void start() throws InterruptedException {
+        InitializeBiDiPipe();
 
-		for (int i = 0; i < NUM_NODES; i++) {
-			Thread t = new Thread(new ConnectionToClient(i));
-			t.start();
-		}
+        for (int i = 0; i < NUM_NODES; i++) {
+            Thread t = new Thread(new ConnectionToClient(i));
+            t.start();
+        }
 
-		Thread t = new Thread(new PublishAdvertisement());
-		t.start();
-	}
+        Thread t = new Thread(new PublishAdvertisement());
+        t.start();
+    }
 
-	/*
-	 * Inicializa os Advertisement para os nós clientes saberem da existência do
-	 * nó central.
-	 */
-	private void InitializeBiDiPipe() {
-		for (int i = 0; i < NUM_NODES; i++) {
-			pipeNeighborhoodAdv[i] = getPipeAdvertisement(i);
-		}
-	}
+    /*
+     * Inicializa os Advertisement para os nós clientes saberem da existência do
+     * nó central.
+     */
+    private void InitializeBiDiPipe() {
+        for (int i = 0; i < NUM_NODES; i++) {
+            pipeNeighborhoodAdv[i] = getPipeAdvertisement(i);
+        }
+    }
 
-	/*
-	 * Classe Responsavel pela conexão entre o servidor e o Cliente
-	 */
-	class ConnectionToClient implements Runnable {
+    /*
+     * Classe Responsavel pela conexão entre o servidor e o Cliente
+     */
+    class ConnectionToClient implements Runnable {
 
-		private int index;
-		private JxtaServerPipe serverPipe;
+        private int index;
+        private JxtaServerPipe serverPipe;
 
-		public ConnectionToClient(int index) {
-			try {
-				this.index = index;
-				serverPipe = new JxtaServerPipe(peerGroup,
-						pipeNeighborhoodAdv[index]);
-				serverPipe.setPipeTimeout(0);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+        public ConnectionToClient(int index) {
+            try {
+                this.index = index;
+                serverPipe = new JxtaServerPipe(peerGroup,
+                        pipeNeighborhoodAdv[index]);
+                serverPipe.setPipeTimeout(0);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-			try {
-				pipeToNeighborhood[index] = serverPipe.accept();
-				Thread t = new Thread(new ConnectionHandler(
-						pipeToNeighborhood[index]));
-				t.start();
-				System.out.println("Client " + Integer.toString(index)
-						+ " conectado");
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            try {
+                pipeToNeighborhood[index] = serverPipe.accept();
+                Thread t = new Thread(new ConnectionHandler(
+                        pipeToNeighborhood[index]));
+                t.start();
+                System.out.println("Client " + Integer.toString(index)
+                        + " conectado");
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
 
-	/*
-	 * Classe Responsavel pela comunicação entre servidor e cliente
-	 */
-	class ConnectionHandler implements PipeMsgListener, Runnable {
+    /*
+     * Classe Responsavel pela comunicação entre servidor e cliente
+     */
+    class ConnectionHandler implements PipeMsgListener, Runnable {
 
-		private JxtaBiDiPipe pipe;
-		private boolean executed;
+        private JxtaBiDiPipe pipe;
+        private boolean executed;
 
-		public ConnectionHandler(JxtaBiDiPipe pipe) {
-			this.pipe = pipe;
-			pipe.setMessageListener(this);
-			executed = true;
+        public ConnectionHandler(JxtaBiDiPipe pipe) {
+            this.pipe = pipe;
+            pipe.setMessageListener(this);
+            executed = true;
 
-			Thread t = new Thread(this);
-			t.start();
-		}
+            Thread t = new Thread(this);
+            t.start();
+        }
 
-		@Override
-		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
-			// TODO Auto-generated method stub
-			Message msg = event.getMessage();
+        @Override
+        synchronized public void pipeMsgEvent(PipeMsgEvent event) {
+            // TODO Auto-generated method stub
+            Message msg = event.getMessage();
 
 			int sender = 0;
 			int receiver = 0;
@@ -219,66 +215,68 @@ public class NodeServerFileSystem implements UtilitesNodes,
 			Message msg = new Message();
 			String response;
 
-			switch (function) {
+            switch (function) {
 
-			case CREATE_MSG:
+                case CREATE_MSG:
 				
 				System.out.println("It's sending response to client: create "
 						+ Integer.toString(sender));
 
-				if (status)
-					response = PipeMensageUtilites.okCreate;
-				else
-					response = PipeMensageUtilites.failCreate;
+                    if (status) {
+                        response = PipeMensageUtilites.okCreate;
+                    } else {
+                        response = PipeMensageUtilites.failCreate;
+                    }
 
-				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
-						Integer.toString(-1), Integer.toString(sender),
-						PipeMensageUtilites.create, fileName, response);
-				break;
+                    MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+                            Integer.toString(-1), Integer.toString(sender),
+                            PipeMensageUtilites.create, fileName, response);
+                    break;
 
-			case DELETE_MSG:
+                case DELETE_MSG:
 				
 				System.out.println("It's sending response to client: delete "
 						+ Integer.toString(sender));
 				
-				if (status)
-					response = PipeMensageUtilites.okRemove;
-				else
-					response = PipeMensageUtilites.failRemove;
+                    if (status) {
+                        response = PipeMensageUtilites.okRemove;
+                    } else {
+                        response = PipeMensageUtilites.failRemove;
+                    }
 				
-				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
-						Integer.toString(-1), Integer.toString(node),
-						PipeMensageUtilites.delete, fileName, response);
+                    MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+                            Integer.toString(-1), Integer.toString(node),
+                            PipeMensageUtilites.delete, fileName, response);
 				
-				try {
-					pipeToNeighborhood[node].sendMessage(msg);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+                    try {
+                        pipeToNeighborhood[node].sendMessage(msg);
+                    } catch (IOException e1) {
+                        // TODO Auto-generated catch block
+                        e1.printStackTrace();
+                    }
 
-				break;
+                    break;
 
-			case READ_MSG:
+                case READ_MSG:
 
 				System.out.println("It's sending response to client: read "
 						+ Integer.toString(node));
 
 				response = "send file to";
 
-				node = fileManager.FileNodePosition(fileName);
+                    node = fileManager.FileNodePosition(fileName);
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(sender), Integer.toString(node),
 						PipeMensageUtilites.read, fileName, response);
 
-				try {
-					pipeToNeighborhood[node].sendMessage(msg);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				break;
+                    try {
+                        pipeToNeighborhood[node].sendMessage(msg);
+                    } catch (IOException e1) {
+                        // TODO Auto-generated catch block
+                        e1.printStackTrace();
+                    }
+                    break;
 
 			case WRITE_MSG:
 
@@ -295,68 +293,70 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				break;
 			}
 
-			try {
-				pipe.sendMessage(msg);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+                    break;
+            }
 
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-			while (executed) {
-				try {
-					Thread.sleep(3000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-	}
+            try {
+                pipe.sendMessage(msg);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
-	/*
-	 * Classe Responsavel pela publicação dos advertisement referentes ao no
-	 * central.
-	 */
-	class PublishAdvertisement implements Runnable {
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            while (executed) {
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
-		@Override
-		public void run() {
+    /*
+     * Classe Responsavel pela publicação dos advertisement referentes ao no
+     * central.
+     */
+    class PublishAdvertisement implements Runnable {
 
-			long lifetime = 60 * 2 * 1000L;
-			long waittime = 60 * 3 * 1000L;
-			long expiration = 60 * 2 * 1000L;
+        @Override
+        public void run() {
 
-			while (true) {
-				try {
-					for (int i = 0; i < NUM_NODES; i++) {
-						System.out.println("Divulgando Advertisement");
-						discovery.publish(pipeNeighborhoodAdv[i], lifetime,
-								expiration);
-						discovery.remotePublish(pipeNeighborhoodAdv[i],
-								expiration);
-					}
-					Thread.sleep(waittime);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
+            long lifetime = 60 * 2 * 1000L;
+            long waittime = 60 * 3 * 1000L;
+            long expiration = 60 * 2 * 1000L;
 
-	}
+            while (true) {
+                try {
+                    for (int i = 0; i < NUM_NODES; i++) {
+                        System.out.println("Divulgando Advertisement");
+                        discovery.publish(pipeNeighborhoodAdv[i], lifetime,
+                                expiration);
+                        discovery.remotePublish(pipeNeighborhoodAdv[i],
+                                expiration);
+                    }
+                    Thread.sleep(waittime);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
-	public static void main(String args[]) throws InterruptedException {
-		NodeServerFileSystem ns = new NodeServerFileSystem();
-		ns.start();
+    public static void main(String args[]) throws InterruptedException {
+        NodeServerFileSystem ns = new NodeServerFileSystem();
+        ns.start();
 
-		while (true)
+        while (true)
 			;
-	}
+    }
 }
