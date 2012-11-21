@@ -53,6 +53,12 @@ public class FileAssist  {
         return strFileContent;
     }
 
+    public byte[] getByte(String fileName){
+    	byte fileContent[] = null;
+    	
+    	return fileContent;
+    }
+    
     public int update(String name) {
         try {
             set_id_input(name);

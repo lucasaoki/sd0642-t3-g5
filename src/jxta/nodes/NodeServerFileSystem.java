@@ -2,6 +2,8 @@ package jxta.nodes;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import utilitesFileSystem.FileManager;
 import utilitesFileSystem.MsgFileSystem;
@@ -41,6 +43,8 @@ public class NodeServerFileSystem implements UtilitesNodes,
 
 	public NodeServerFileSystem() {
 		try {
+
+			Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
 
 			fileManager = new FileManager();
 			msgFileSystem = new MsgFileSystem();
@@ -181,6 +185,7 @@ public class NodeServerFileSystem implements UtilitesNodes,
 			int sender = 0;
 			int receiver = 0;
 			int function = 0;
+			int node = -1;
 			boolean status = false;
 			String fileName = null;
 
@@ -190,12 +195,14 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				receiver = msgFileSystem.getReceiverFromMessage(msg);
 				fileName = msgFileSystem.getFileNameFromMessage(msg);
 			}
+
 			switch (function) {
 			case CREATE_MSG:
 				status = fileManager.InsertFileNode(sender, fileName);
 				break;
 			case DELETE_MSG:
-				status = fileManager.RemoveFileNode(sender, fileName);
+				node = fileManager.FileNodePosition(fileName);
+				status = fileManager.RemoveFileNode(node, fileName);
 				break;
 			case MOVE_MSG:
 				status = fileManager.MoveFileBetweenNodes(receiver, sender,
@@ -203,19 +210,21 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				break;
 			}
 
-			sendMessage(function, sender, receiver, fileName, status);
+			sendMessage(function, sender, receiver, fileName, status, node);
 		}
 
 		synchronized void sendMessage(int function, int sender, int receiver,
-				String fileName, boolean status) {
+				String fileName, boolean status, int node) {
 
 			Message msg = new Message();
 			String response;
-			int node = 0;
 
 			switch (function) {
 
 			case CREATE_MSG:
+				
+				System.out.println("It's sending response to client: create "
+						+ Integer.toString(sender));
 
 				if (status)
 					response = PipeMensageUtilites.okCreate;
@@ -228,18 +237,19 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				break;
 
 			case DELETE_MSG:
-
+				
+				System.out.println("It's sending response to client: delete "
+						+ Integer.toString(sender));
+				
 				if (status)
 					response = PipeMensageUtilites.okRemove;
 				else
 					response = PipeMensageUtilites.failRemove;
-
-				node = fileManager.FileNodePosition(fileName);
-
+				
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(node),
 						PipeMensageUtilites.delete, fileName, response);
-
+				
 				try {
 					pipeToNeighborhood[node].sendMessage(msg);
 				} catch (IOException e1) {
@@ -251,13 +261,16 @@ public class NodeServerFileSystem implements UtilitesNodes,
 
 			case READ_MSG:
 
+				System.out.println("It's sending response to client: read "
+						+ Integer.toString(node));
+
 				response = "send file to";
 
 				node = fileManager.FileNodePosition(fileName);
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(sender), Integer.toString(node),
-						PipeMensageUtilites.delete, fileName, response);
+						PipeMensageUtilites.read, fileName, response);
 
 				try {
 					pipeToNeighborhood[node].sendMessage(msg);
@@ -268,12 +281,17 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				break;
 
 			case WRITE_MSG:
+
+				System.out.println("It's sending response to client: write "
+						+ Integer.toString(sender));
+				
 				node = fileManager.FileNodePosition(fileName);
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(-1), Integer.toString(sender),
-						PipeMensageUtilites.delete, fileName, Integer.toString(node));
-				
+						PipeMensageUtilites.write, fileName,
+						Integer.toString(node));
+
 				break;
 			}
 
