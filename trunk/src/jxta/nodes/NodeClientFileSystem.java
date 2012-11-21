@@ -3,10 +3,8 @@ package jxta.nodes;
 import java.io.File;
 import java.io.IOException;
 import java.util.Enumeration;
-
-import utilitesFileSystem.MsgFileSystem;
-import utilitesFileSystem.PipeMensageUtilites;
-import utilitesFileSystem.UtilitesMsgFileSystem;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.jxta.discovery.DiscoveryEvent;
 import net.jxta.discovery.DiscoveryListener;
@@ -28,7 +26,10 @@ import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.DiscoveryResponseMsg;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.util.JxtaBiDiPipe;
-import net.jxta.util.PipeUtilities;
+import utilitesFileSystem.MsgFileSystem;
+import utilitesFileSystem.PipeMensageUtilites;
+import utilitesFileSystem.UtilitesMsgFileSystem;
+import FileLib.Interface;
 
 public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		UtilitesMsgFileSystem {
@@ -53,9 +54,14 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 	private MsgFileSystem msgFileSystem;
 
+	private Interface fileInterface;
+
 	public NodeClientFileSystem(int nodeName) {
 
+		Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
+
 		msgFileSystem = new MsgFileSystem();
+		fileInterface = new Interface();
 
 		this.nodeName = nodeName;
 		input = new InputPipe[NUM_NODES];
@@ -73,6 +79,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		}
 
 		try {
+
 			manager = new NetworkManager(NetworkManager.ConfigMode.EDGE,
 					Integer.toString(nodeName), new File(new File(".cache"),
 							Integer.toString(nodeName)).toURI());
@@ -147,17 +154,17 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			Message msg = event.getMessage();
 
 			// as únicas funcoes que os clientes trocam, é ler
-			// de um outro arquivo e atualizar o 
+			// de um outro arquivo e atualizar o
 			int function = msgFileSystem.functionFromMessage(msg);
-			
-			switch(function){
+
+			switch (function) {
 			case READ_FILE:
-				break;	
-				
+				break;
+
 			case WRITE_FILE:
 				break;
 			}
-			
+
 		}
 	}
 
@@ -172,6 +179,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			// TODO Auto-generated method stub
 			Message msg = event.getMessage();
 			String response = null;
+			String fileName = null;
+			int node;
 
 			int function = msgFileSystem.functionFromMessage(msg);
 
@@ -179,9 +188,15 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			case CREATE_MSG:
 				response = msgFileSystem.getResponseFromMessage(msg);
 				if (response.equals(PipeMensageUtilites.okCreate)) {
-
+					// Create file
+					fileInterface.get_data('c',
+							msgFileSystem.getFileNameFromMessage(msg), null);
+					System.out.println("Create the file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 				} else {
-
+					// Nao cria o arquivo
+					System.out.println("Can not create the file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 				}
 
 				break;
@@ -189,22 +204,33 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			case DELETE_MSG:
 				response = msgFileSystem.getResponseFromMessage(msg);
 				if (response.equals(PipeMensageUtilites.okRemove)) {
-
+					// deleta o arquivo
+					fileInterface.get_data('d',
+							msgFileSystem.getFileNameFromMessage(msg), null);
+					System.out.println("Delete the file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 				} else {
-
+					System.out.println("Can not delete the file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 				}
 				break;
 
 			case READ_MSG:
+				
 				response = msgFileSystem.getResponseFromMessage(msg);
+				node = msgFileSystem.getSenderFromMessage(msg);
+
+				// Carregar o arquivo e reenvia-lo
+
 				// vai receber e reenviar a mensagem para o no correto
 				// esta no campo sender?
 				break;
 
 			case WRITE_MSG:
 				response = msgFileSystem.getResponseFromMessage(msg);
+				fileName = msgFileSystem.getFileNameFromMessage(msg);
 				// Para quem tem q enviar o e atualizar o
-				// arquivo
+				// arquivo e falta falar o que enviar
 				break;
 			}
 		}
@@ -260,6 +286,10 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				// e.printStackTrace();
 			}
 		}
+	}
+
+	public void sendMessageForServerFileSystem(Message msg) throws IOException {
+		pipeToServer.sendMessage(msg);
 	}
 
 	/*
@@ -342,10 +372,29 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		t2.start();
 	}
 
-	public static void main(String args[]) {
+	public static void main(String args[]) throws IOException,
+			InterruptedException {
 		NodeClientFileSystem nc = new NodeClientFileSystem(0);
 		nc.start();
 
+		Thread.sleep(10000);
+
+		String sender = "0";
+		String receiver = "-1";
+		String fileName1 = "jaca.txt";
+
+		Message msg1 = new Message();
+		Message msg2 = new Message();
+
+		MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
+				receiver, PipeMensageUtilites.create, fileName1, "");
+
+		MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+				receiver, PipeMensageUtilites.delete, fileName1, "");
+
+		nc.sendMessageForServerFileSystem(msg1);
+		Thread.sleep(2000);
+		nc.sendMessageForServerFileSystem(msg2);
 		while (true)
 			;
 	}
