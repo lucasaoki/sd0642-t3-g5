@@ -40,10 +40,10 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
     public NodeServerFileSystem() {
         try {
 
-			Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
+            Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
 
-			fileManager = new FileManager();
-			msgFileSystem = new MsgFileSystem();
+            fileManager = new FileManager();
+            msgFileSystem = new MsgFileSystem();
 
             pipeToNeighborhood = new JxtaBiDiPipe[NUM_NODES];
             pipeNeighborhoodAdv = new PipeAdvertisement[NUM_NODES];
@@ -178,49 +178,49 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
             // TODO Auto-generated method stub
             Message msg = event.getMessage();
 
-			int sender = 0;
-			int receiver = 0;
-			int function = 0;
-			int node = -1;
-			boolean status = false;
-			String fileName = null;
+            int sender = 0;
+            int receiver = 0;
+            int function = 0;
+            int node = -1;
+            boolean status = false;
+            String fileName = null;
 
-			function = msgFileSystem.functionFromMessage(msg);
-			if (function >= 0) {
-				sender = msgFileSystem.getSenderFromMessage(msg);
-				receiver = msgFileSystem.getReceiverFromMessage(msg);
-				fileName = msgFileSystem.getFileNameFromMessage(msg);
-			}
+            function = msgFileSystem.functionFromMessage(msg);
+            if (function >= 0) {
+                sender = msgFileSystem.getSenderFromMessage(msg);
+                receiver = msgFileSystem.getReceiverFromMessage(msg);
+                fileName = msgFileSystem.getFileNameFromMessage(msg);
+            }
 
-			switch (function) {
-			case CREATE_MSG:
-				status = fileManager.InsertFileNode(sender, fileName);
-				break;
-			case DELETE_MSG:
-				node = fileManager.FileNodePosition(fileName);
-				status = fileManager.RemoveFileNode(node, fileName);
-				break;
-			case MOVE_MSG:
-				status = fileManager.MoveFileBetweenNodes(receiver, sender,
-						fileName);
-				break;
-			}
+            switch (function) {
+                case CREATE_MSG:
+                    status = fileManager.InsertFileNode(sender, fileName);
+                    break;
+                case DELETE_MSG:
+                    node = fileManager.FileNodePosition(fileName);
+                    status = fileManager.RemoveFileNode(node, fileName);
+                    break;
+                case MOVE_MSG:
+                    status = fileManager.MoveFileBetweenNodes(receiver, sender,
+                            fileName);
+                    break;
+            }
 
-			sendMessage(function, sender, receiver, fileName, status, node);
-		}
+            sendMessage(function, sender, receiver, fileName, status, node);
+        }
 
-		synchronized void sendMessage(int function, int sender, int receiver,
-				String fileName, boolean status, int node) {
+        synchronized void sendMessage(int function, int sender, int receiver,
+                String fileName, boolean status, int node) {
 
-			Message msg = new Message();
-			String response;
+            Message msg = new Message();
+            String response;
 
             switch (function) {
 
                 case CREATE_MSG:
-				
-				System.out.println("It's sending response to client: create "
-						+ Integer.toString(sender));
+
+                    System.out.println("It's sending response to client: create "
+                            + Integer.toString(sender));
 
                     if (status) {
                         response = PipeMensageUtilites.okCreate;
@@ -234,20 +234,20 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
                     break;
 
                 case DELETE_MSG:
-				
-				System.out.println("It's sending response to client: delete "
-						+ Integer.toString(sender));
-				
+
+                    System.out.println("It's sending response to client: delete "
+                            + Integer.toString(sender));
+
                     if (status) {
                         response = PipeMensageUtilites.okRemove;
                     } else {
                         response = PipeMensageUtilites.failRemove;
                     }
-				
+
                     MsgFileSystem.createMessageCentralNodeFileSystem(msg,
                             Integer.toString(-1), Integer.toString(node),
                             PipeMensageUtilites.delete, fileName, response);
-				
+
                     try {
                         pipeToNeighborhood[node].sendMessage(msg);
                     } catch (IOException e1) {
@@ -259,16 +259,16 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
 
                 case READ_MSG:
 
-				System.out.println("It's sending response to client: read "
-						+ Integer.toString(node));
+                    System.out.println("It's sending response to client: read "
+                            + Integer.toString(node));
 
-				response = "send file to";
+                    response = "send file to";
 
                     node = fileManager.FileNodePosition(fileName);
 
-				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
-						Integer.toString(sender), Integer.toString(node),
-						PipeMensageUtilites.read, fileName, response);
+                    MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+                            Integer.toString(sender), Integer.toString(node),
+                            PipeMensageUtilites.read, fileName, response);
 
                     try {
                         pipeToNeighborhood[node].sendMessage(msg);
@@ -278,20 +278,17 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
                     }
                     break;
 
-			case WRITE_MSG:
+                case WRITE_MSG:
 
-				System.out.println("It's sending response to client: write "
-						+ Integer.toString(sender));
-				
-				node = fileManager.FileNodePosition(fileName);
+                    System.out.println("It's sending response to client: write "
+                            + Integer.toString(sender));
 
-				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
-						Integer.toString(-1), Integer.toString(sender),
-						PipeMensageUtilites.write, fileName,
-						Integer.toString(node));
+                    node = fileManager.FileNodePosition(fileName);
 
-				break;
-			}
+                    MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+                            Integer.toString(-1), Integer.toString(sender),
+                            PipeMensageUtilites.write, fileName,
+                            Integer.toString(node));
 
                     break;
             }
