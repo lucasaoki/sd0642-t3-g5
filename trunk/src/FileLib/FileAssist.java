@@ -53,9 +53,22 @@ public class FileAssist  {
         return strFileContent;
     }
 
-    public byte[] getByte(String fileName){
+    public byte[] getByteFromFile(String fileName){
+    	
     	byte fileContent[] = null;
     	
+    	File file = new File(fileName);
+        try {
+            
+        	FileInputStream fin = new FileInputStream(file);
+            fin.read(fileContent);
+
+            fin.close();
+        } catch (IOException e) {
+            System.err.print("Error - Unable to write to file");
+            System.exit(-1);
+        }
+        
     	return fileContent;
     }
     

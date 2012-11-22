@@ -231,9 +231,16 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
                     MsgFileSystem.createMessageCentralNodeFileSystem(msg,
                             Integer.toString(-1), Integer.toString(sender),
                             PipeMensageUtilites.create, fileName, response);
+                    
+                    try {
+                        pipe.sendMessage(msg);
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                     break;
-
-                case DELETE_MSG:
+                    
+			case DELETE_MSG:
 
                     System.out.println("It's sending response to client: delete "
                             + Integer.toString(sender));
@@ -289,16 +296,18 @@ public class NodeServerFileSystem implements UtilitesNodes, UtilitesMsgFileSyste
                             Integer.toString(-1), Integer.toString(sender),
                             PipeMensageUtilites.write, fileName,
                             Integer.toString(node));
+                    
+                    try {
+                        pipe.sendMessage(msg);
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
 
                     break;
             }
 
-            try {
-                pipe.sendMessage(msg);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            
         }
 
         @Override

@@ -18,7 +18,7 @@ public class MsgFileSystem implements PipeMensageUtilites,
                 string, null));
     }
 
-    public static void addByteArrayToMessage(Message message, String nameSpace,
+    public void addByteArrayToMessage(Message message, String nameSpace,
             String elemName, byte data[]) {
         byte buffer[] = data;
 
