@@ -122,7 +122,7 @@ public class MsgFileSystem implements PipeMensageUtilites,
         return fileName;
     }
 
-    public static InputStream getInputStreamFromMessage(Message message) throws IOException {
+    public InputStream getInputStreamFromMessage(Message message) throws IOException {
         InputStream result = null;
         MessageElement element = message.getMessageElement(null, PipeMensageUtilites.stream);
         
