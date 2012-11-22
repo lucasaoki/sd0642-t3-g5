@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,6 +32,7 @@ import net.jxta.util.JxtaBiDiPipe;
 import utilitesFileSystem.MsgFileSystem;
 import utilitesFileSystem.PipeMensageUtilites;
 import utilitesFileSystem.UtilitesMsgFileSystem;
+import FileLib.FileAssist;
 import FileLib.Interface;
 
 public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
@@ -57,14 +57,16 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 	private MsgFileSystem msgFileSystem;
 	private Interface fileInterface;
-
+	private FileAssist fileAssist;
+	
 	public NodeClientFileSystem(int nodeName) {
 
 		Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
 
 		msgFileSystem = new MsgFileSystem();
 		fileInterface = new Interface();
-
+		fileAssist = new FileAssist();
+		
 		this.nodeName = nodeName;
 		input = new InputPipe[NUM_NODES];
 		output = new OutputPipe[NUM_NODES];
@@ -156,17 +158,20 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			try {
 				// TODO Auto-generated method stub
 				Message msg = event.getMessage();
-				// as únicas funcoes que os clientes trocam, é ler
-				// de um outro arquivo e atualizar o
+
 				int function = msgFileSystem.functionFromMessage(msg);
 				switch (function) {
 				case READ_FILE:
+					
 					int count = 0;
 					is = msgFileSystem.getInputStreamFromMessage(msg);
 					while (is.read() != -1) {
 						count++; // qtde de bytes lidos. Não sei se vai
 									// precisar, talvez se precisar "debugar"
 					}
+					
+					System.out.println(is.toString());
+					
 					break;
 				case WRITE_FILE:
 
@@ -197,6 +202,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		synchronized public void pipeMsgEvent(PipeMsgEvent event) {
 			// TODO Auto-generated method stub
 			Message msg = event.getMessage();
+			Message message = new Message();
+			
 			String response = null;
 			String fileName = null;
 			int node;
@@ -238,9 +245,10 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 				response = msgFileSystem.getResponseFromMessage(msg);
 				node = msgFileSystem.getSenderFromMessage(msg);
+				String f = msgFileSystem.getFileNameFromMessage(msg);
 				
 				try {
-					output[node].send(msg);
+					output[node].send(message);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -252,7 +260,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				fileName = msgFileSystem.getFileNameFromMessage(msg);
 				
 				try {
-					output[0].send(msg);
+					output[Integer.parseInt(response)].send(message);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
