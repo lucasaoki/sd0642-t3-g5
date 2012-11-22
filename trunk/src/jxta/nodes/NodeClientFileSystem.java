@@ -58,7 +58,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 	private MsgFileSystem msgFileSystem;
 	private Interface fileInterface;
 	private FileAssist fileAssist;
-	
+
 	public NodeClientFileSystem(int nodeName) {
 
 		Logger.getLogger("net.jxta").setLevel(Level.SEVERE);
@@ -66,7 +66,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		msgFileSystem = new MsgFileSystem();
 		fileInterface = new Interface();
 		fileAssist = new FileAssist();
-		
+
 		this.nodeName = nodeName;
 		input = new InputPipe[NUM_NODES];
 		output = new OutputPipe[NUM_NODES];
@@ -162,18 +162,26 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				int function = msgFileSystem.functionFromMessage(msg);
 				switch (function) {
 				case READ_FILE:
-					
+
 					int count = 0;
 					is = msgFileSystem.getInputStreamFromMessage(msg);
 					while (is.read() != -1) {
 						count++; // qtde de bytes lidos. Não sei se vai
 									// precisar, talvez se precisar "debugar"
 					}
-					
+
 					System.out.println(is.toString());
-					
+
 					break;
 				case WRITE_FILE:
+
+					InputStream in = msgFileSystem
+							.getInputStreamFromMessage(msg);
+					fileAssist.update(
+							msgFileSystem.getFileNameFromMessage(msg), in);
+
+					System.out.println("File update "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 
 					break;
 				}
@@ -203,10 +211,11 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			// TODO Auto-generated method stub
 			Message msg = event.getMessage();
 			Message message = new Message();
-			
+
 			String response = null;
 			String fileName = null;
 			int node;
+			byte data[] = null;
 
 			int function = msgFileSystem.functionFromMessage(msg);
 
@@ -246,7 +255,17 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				response = msgFileSystem.getResponseFromMessage(msg);
 				node = msgFileSystem.getSenderFromMessage(msg);
 				String f = msgFileSystem.getFileNameFromMessage(msg);
-				
+
+				data = fileAssist.getByteFromFile(msgFileSystem
+						.getFileNameFromMessage(msg));
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(message,
+						Integer.toString(nodeName), Integer.toString(node),
+						PipeMensageUtilites.readFile, fileName, "");
+
+				msgFileSystem.addByteArrayToMessage(message, null,
+						PipeMensageUtilites.stream, data);
+
 				try {
 					output[node].send(message);
 				} catch (IOException e) {
@@ -258,9 +277,28 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			case WRITE_MSG:
 				response = msgFileSystem.getResponseFromMessage(msg);
 				fileName = msgFileSystem.getFileNameFromMessage(msg);
-				
+				node = Integer.parseInt(response);
+
 				try {
-					output[Integer.parseInt(response)].send(message);
+					InputStream in = msgFileSystem
+							.getInputStreamFromMessage(msg);
+					data = new byte[in.available()];
+					in.read(data);
+
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				MsgFileSystem.createMessageCentralNodeFileSystem(message,
+						Integer.toString(nodeName), Integer.toString(node),
+						PipeMensageUtilites.writeFile, fileName, "");
+
+				msgFileSystem.addByteArrayToMessage(message, null,
+						PipeMensageUtilites.stream, data);
+
+				try {
+					output[node].send(message);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -430,27 +468,61 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 	public static void main(String args[]) throws IOException,
 			InterruptedException {
-		NodeClientFileSystem nc = new NodeClientFileSystem(0);
+
+		System.out.println(args[0]);
+
+		int node = Integer.parseInt(args[0]);
+
+		NodeClientFileSystem nc = new NodeClientFileSystem(node);
 		nc.start();
 
 		Thread.sleep(10000);
 
-		String sender = "0";
+		String sender = Integer.toString(node);
 		String receiver = "-1";
 		String fileName1 = "jaca.txt";
+		String insert = "HELLO WORLD JXTA !!!!!";
 
 		Message msg1 = new Message();
 		Message msg2 = new Message();
 
-		MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
-				receiver, PipeMensageUtilites.create, fileName1, "");
+		MsgFileSystem msgFileSystem = new MsgFileSystem();
+		
+		switch (node) {
 
-		MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
-				receiver, PipeMensageUtilites.delete, fileName1, "");
+		case 0:
+			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
+					receiver, PipeMensageUtilites.create, fileName1, "");
 
-		nc.sendMessageForServerFileSystem(msg1);
-		Thread.sleep(2000);
-		nc.sendMessageForServerFileSystem(msg2);
+			MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+					receiver, PipeMensageUtilites.delete, fileName1, "");
+
+			Thread.sleep(1000);
+			nc.sendMessageForServerFileSystem(msg1);
+			Thread.sleep(2000);
+			nc.sendMessageForServerFileSystem(msg2);
+			
+			break;
+
+		case 1:
+			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
+					receiver, PipeMensageUtilites.read, fileName1, "");
+
+			MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+					receiver, PipeMensageUtilites.write, fileName1, "");
+			
+			msgFileSystem.addByteArrayToMessage(msg2, null,
+					PipeMensageUtilites.stream, insert.getBytes());
+			
+			Thread.sleep(1000);
+			nc.sendMessageForServerFileSystem(msg2);
+			Thread.sleep(2000);
+			nc.sendMessageForServerFileSystem(msg1);
+			
+			break;
+		}
+
+
 		while (true)
 			;
 	}
