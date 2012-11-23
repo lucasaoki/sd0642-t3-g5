@@ -118,7 +118,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			String str = Integer.toString(nodeName) + "_" + Integer.toString(i);
 
 			myPipeAdv[i] = getPipeAdvertisement(str);
-			System.out.println(myPipeAdv[i].toString());
+			// System.out.println(myPipeAdv[i].toString());
 			try {
 				input[i] = pipeService.createInputPipe(myPipeAdv[i],
 						new MsgListenerNodes());
@@ -160,23 +160,33 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				Message msg = event.getMessage();
 
 				int function = msgFileSystem.functionFromMessage(msg);
+				// ESTA ENTREANDO AQUI
 				switch (function) {
+
 				case READ_FILE:
 
-					int count = 0;
-					is = msgFileSystem.getInputStreamFromMessage(msg);
-					while (is.read() != -1) {
-						count++; // qtde de bytes lidos. Não sei se vai
-									// precisar, talvez se precisar "debugar"
-					}
+					System.out.println("It's reading file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 
-					System.out.println(is.toString());
+					is = msgFileSystem.getInputStreamFromMessage(msg);
+
+					byte data[] = new byte[is.available()];
+
+					is.read(data);
+
+					String str = new String(data);
+					System.out.println(str);
 
 					break;
+
 				case WRITE_FILE:
+
+					System.out.println("It's writing file: "
+							+ msgFileSystem.getFileNameFromMessage(msg));
 
 					InputStream in = msgFileSystem
 							.getInputStreamFromMessage(msg);
+
 					fileAssist.update(
 							msgFileSystem.getFileNameFromMessage(msg), in);
 
@@ -190,7 +200,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 						Level.SEVERE, null, ex);
 			} finally {
 				try {
-					is.close();
+					if (is != null)
+						is.close();
 				} catch (IOException ex) {
 					Logger.getLogger(NodeClientFileSystem.class.getName()).log(
 							Level.SEVERE, null, ex);
@@ -220,7 +231,9 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			int function = msgFileSystem.functionFromMessage(msg);
 
 			switch (function) {
+
 			case CREATE_MSG:
+
 				response = msgFileSystem.getResponseFromMessage(msg);
 				if (response.equals(PipeMensageUtilites.okCreate)) {
 					// Create file
@@ -237,6 +250,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				break;
 
 			case DELETE_MSG:
+				
 				response = msgFileSystem.getResponseFromMessage(msg);
 				if (response.equals(PipeMensageUtilites.okRemove)) {
 					// deleta o arquivo
@@ -256,12 +270,15 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				node = msgFileSystem.getSenderFromMessage(msg);
 				String f = msgFileSystem.getFileNameFromMessage(msg);
 
+				System.out.println("It's sending response to client: read "
+						+ Integer.toString(node));
+
 				data = fileAssist.getByteFromFile(msgFileSystem
 						.getFileNameFromMessage(msg));
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(message,
 						Integer.toString(nodeName), Integer.toString(node),
-						PipeMensageUtilites.readFile, fileName, "");
+						PipeMensageUtilites.readFile, f, "");
 
 				msgFileSystem.addByteArrayToMessage(message, null,
 						PipeMensageUtilites.stream, data);
@@ -275,9 +292,13 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				break;
 
 			case WRITE_MSG:
+
 				response = msgFileSystem.getResponseFromMessage(msg);
 				fileName = msgFileSystem.getFileNameFromMessage(msg);
 				node = Integer.parseInt(response);
+
+				System.out.println("It's sending response to client: write "
+						+ Integer.toString(node));
 
 				try {
 					InputStream in = msgFileSystem
@@ -333,11 +354,12 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 					if (firstDigit != nodeName) {
 						if (secondDigit == nodeName) {
-							if (anotherPipeAdv[secondDigit] == null) {
-								anotherPipeAdv[secondDigit] = pipeAdv;
+							if (anotherPipeAdv[firstDigit] == null) {
+								anotherPipeAdv[firstDigit] = pipeAdv;
+								// System.out.println(pipeAdv.toString());
 								try {
 									pipeService.createOutputPipe(pipeAdv,
-											new OutputCreater(secondDigit));
+											new OutputCreater(firstDigit));
 								} catch (IOException e1) {
 									// TODO Auto-generated catch block
 									e1.printStackTrace();
@@ -469,10 +491,11 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 	public static void main(String args[]) throws IOException,
 			InterruptedException {
 
-		System.out.println(args[0]);
+		// System.out.println(args[0]);
 
-		int node = Integer.parseInt(args[0]);
-
+		// int node = Integer.parseInt(args[0]);
+		int node = 1;
+		System.out.println("NODE: " + node);
 		NodeClientFileSystem nc = new NodeClientFileSystem(node);
 		nc.start();
 
@@ -487,41 +510,49 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		Message msg2 = new Message();
 
 		MsgFileSystem msgFileSystem = new MsgFileSystem();
-		
+
 		switch (node) {
 
 		case 0:
+
 			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
 					receiver, PipeMensageUtilites.create, fileName1, "");
 
-			MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
-					receiver, PipeMensageUtilites.delete, fileName1, "");
+			// MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+			// receiver, PipeMensageUtilites.delete, fileName1, "");
 
 			Thread.sleep(1000);
 			nc.sendMessageForServerFileSystem(msg1);
 			Thread.sleep(2000);
-			nc.sendMessageForServerFileSystem(msg2);
-			
+			// nc.sendMessageForServerFileSystem(msg2);
+
 			break;
 
 		case 1:
+
 			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
 					receiver, PipeMensageUtilites.read, fileName1, "");
 
 			MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
 					receiver, PipeMensageUtilites.write, fileName1, "");
-			
+
 			msgFileSystem.addByteArrayToMessage(msg2, null,
 					PipeMensageUtilites.stream, insert.getBytes());
-			
-			Thread.sleep(1000);
+
+			InputStream in = msgFileSystem.getInputStreamFromMessage(msg2);
+
+			byte data[] = new byte[in.available()];
+			in.read(data);
+
+			// String str = new String(data);
+			// System.out.println(str);
+
 			nc.sendMessageForServerFileSystem(msg2);
-			Thread.sleep(2000);
+			Thread.sleep(5000);
 			nc.sendMessageForServerFileSystem(msg1);
-			
+
 			break;
 		}
-
 
 		while (true)
 			;
