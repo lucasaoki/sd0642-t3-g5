@@ -186,6 +186,7 @@ public class NodeServerFileSystem implements UtilitesNodes,
 			int node = -1;
 			boolean status = false;
 			String fileName = null;
+			InputStream in = null;
 
 			function = msgFileSystem.functionFromMessage(msg);
 			if (function >= 0) {
@@ -206,13 +207,21 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				status = fileManager.MoveFileBetweenNodes(receiver, sender,
 						fileName);
 				break;
+			case WRITE_MSG:
+				try {
+					in = msgFileSystem.getInputStreamFromMessage(msg);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
 			}
 
-			sendMessage(function, sender, receiver, fileName, status, node);
+			sendMessage(function, sender, receiver, fileName, status, node, in);
 		}
 
 		synchronized void sendMessage(int function, int sender, int receiver,
-				String fileName, boolean status, int node) {
+				String fileName, boolean status, int node, InputStream in) {
 
 			Message msg = new Message();
 			String response;
@@ -267,13 +276,12 @@ public class NodeServerFileSystem implements UtilitesNodes,
 				break;
 
 			case READ_MSG:
+				node = fileManager.FileNodePosition(fileName);
 
 				System.out.println("It's sending response to client: read "
 						+ Integer.toString(node));
 
 				response = "send file to";
-
-				node = fileManager.FileNodePosition(fileName);
 
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg,
 						Integer.toString(sender), Integer.toString(node),
@@ -300,11 +308,12 @@ public class NodeServerFileSystem implements UtilitesNodes,
 						Integer.toString(node));
 
 				try {
-					
-					InputStream in = msgFileSystem
-							.getInputStreamFromMessage(msg);
+
 					byte data[] = new byte[in.available()];
 					in.read(data);
+
+					// String str = new String(data);
+					// System.out.println(str);
 
 					msgFileSystem.addByteArrayToMessage(msg, null,
 							PipeMensageUtilites.stream, data);

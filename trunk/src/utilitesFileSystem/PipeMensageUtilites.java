@@ -20,10 +20,10 @@ public interface PipeMensageUtilites {
 	public final static String write = "writeFile";
 
 	// Operações para os nós
-	public final static String readFile = "readFile";
-	public final static String moveFile = "moveFile";
-	public final static String writeFile = "writeFile";
-	public final static String deleteFile = "deleteFile";
+	public final static String readFile = "readFileNode";
+	public final static String moveFile = "moveFileNode";
+	public final static String writeFile = "writeFileNode";
+	public final static String deleteFile = "deleteFileNode";
 
 	// Nome do arquivo para funcionamento
 	public final static String fileName = "fileName";

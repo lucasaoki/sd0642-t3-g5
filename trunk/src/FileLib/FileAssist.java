@@ -2,7 +2,6 @@ package FileLib;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,6 +62,8 @@ public class FileAssist {
 		try {
 
 			FileInputStream fin = new FileInputStream(file);
+			fileContent = new byte[fin.available()];
+
 			fin.read(fileContent);
 
 			fin.close();
@@ -91,14 +92,16 @@ public class FileAssist {
 
 	public int update(String name, InputStream in) {
 
-		file = new File(name_file);
+		File file = new File(name);
 		if (file.exists()) {
 			try {
-				fout = new FileOutputStream(name_file, true);
+				
 				byte data[] = new byte[in.available()];
 				in.read(data);
-				fout.write(data);
-				fout.close();
+				String str = new String(data);
+				
+				return update(name, str);
+				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -112,10 +115,10 @@ public class FileAssist {
 
 	public int update(String name, String str) {
 		try {
-			set_id_input(name);
-			file = new File(name_file);
+//			set_id_input(name);
+			file = new File(name);
 			if (file.exists()) {
-				fout = new FileOutputStream(name_file, true);
+				fout = new FileOutputStream(name, true);
 				fout.write(str.getBytes());
 				fout.close();
 				return 1;
@@ -158,6 +161,8 @@ public class FileAssist {
 			set_id_input(name);
 			file = new File(name_file);
 			file.createNewFile();
+			update(name, " ");
+			
 		} catch (IOException e) {
 			System.err.print("Error - Unable to write to file");
 			System.exit(-1);
