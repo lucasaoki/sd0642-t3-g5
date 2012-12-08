@@ -12,7 +12,8 @@ public interface PipeMensageUtilites {
 	public final static String close = "closeFile";
 	public final static String open = "openFile";
 	public final static String receiveFile = "receiveFile";
-
+	public final static String allFiles = "allFiles";
+	
 	public final static String create = "createFile"; // Serão implementados
 	public final static String delete = "deleteFile";
 	public final static String move = "moveFile";

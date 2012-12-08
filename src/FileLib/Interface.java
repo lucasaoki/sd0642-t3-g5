@@ -22,16 +22,13 @@ public class Interface {
 		// inter.get_data(args[0],args[1],args[2]);
 	}
 
-	public void Interface() {
-	}
-
 	public void read_str(String str) { // Le o arquivo recebido do outro no.
 		System.out.println("/n" + str);
 	}
 
 	public void menu() {
 		String strStat;
-		String name;
+		String name = null;
 		int menu;
 		char stat = 'o';
 

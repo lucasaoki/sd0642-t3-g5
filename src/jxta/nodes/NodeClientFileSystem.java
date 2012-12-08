@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -160,7 +161,6 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				Message msg = event.getMessage();
 
 				int function = msgFileSystem.functionFromMessage(msg);
-				// ESTA ENTREANDO AQUI
 				switch (function) {
 
 				case READ_FILE:
@@ -250,7 +250,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				break;
 
 			case DELETE_MSG:
-				
+
 				response = msgFileSystem.getResponseFromMessage(msg);
 				if (response.equals(PipeMensageUtilites.okRemove)) {
 					// deleta o arquivo
@@ -325,6 +325,13 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 					e.printStackTrace();
 				}
 				break;
+			case ALL_FILE:
+				
+				response = msgFileSystem.getResponseFromMessage(msg);
+				
+				System.out.println(response);
+				
+				break;
 			}
 		}
 	}
@@ -356,7 +363,6 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 						if (secondDigit == nodeName) {
 							if (anotherPipeAdv[firstDigit] == null) {
 								anotherPipeAdv[firstDigit] = pipeAdv;
-								// System.out.println(pipeAdv.toString());
 								try {
 									pipeService.createOutputPipe(pipeAdv,
 											new OutputCreater(firstDigit));
@@ -425,7 +431,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			discovery.addDiscoveryListener(listener);
 
 			while (exec) {
-				System.out.println("Descobrindo PipeAdvetisement");
+				// System.out.println("Descobrindo PipeAdvetisement");
 				discovery.getRemoteAdvertisements(null, DiscoveryService.ADV,
 						"Name", null, NUM_NODES * 10, null);
 				try {
@@ -456,7 +462,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 			// TODO Auto-generated method stub
 			while (exec) {
 				try {
-					System.out.println("Informado PipeAdvetisement");
+					// System.out.println("Informado PipeAdvetisement");
 					for (int i = 0; i < NUM_NODES; i++) {
 						// System.out.println(myPipeAdv[i].toString());
 						discovery.publish(myPipeAdv[i], lifetime, expiration);
@@ -488,73 +494,173 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		t2.start();
 	}
 
+	// Fazer algo parecido com o terminal do linux
+	//
+	public void startUserCommunication() {
+
+		System.out.println("Wait ...");
+
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		System.out.println("Welcome to the file system distribuied");
+
+		String command = null;
+		String Delimeter = "[ ]";
+		String[] tokens = null;
+
+		String ls = "ls";
+		String echo = "echo";
+		String cat = "cat";
+		String touch = "touch";
+
+		String receiver = "-1";
+
+		while (true) {
+
+			Scanner scan = new Scanner(System.in);
+			command = scan.nextLine();
+
+			tokens = command.split(Delimeter);
+
+			if (tokens[0].equals(ls)) {	
+				Message msg1 = new Message();
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg1,
+						Integer.toString(nodeName), receiver,
+						PipeMensageUtilites.allFiles, "", "");
+				
+				try {
+					this.sendMessageForServerFileSystem(msg1);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			if (tokens[0].equals(echo)) {
+				Message msg2 = new Message();
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg2,
+						Integer.toString(nodeName), receiver,
+						PipeMensageUtilites.write, tokens[3], "");
+
+				msgFileSystem.addByteArrayToMessage(msg2, null,
+						PipeMensageUtilites.stream, tokens[1].getBytes());
+
+				try {
+					this.sendMessageForServerFileSystem(msg2);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			if (tokens[0].equals(cat)) {
+				Message msg3 = new Message();
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg3,
+						Integer.toString(nodeName), receiver,
+						PipeMensageUtilites.read, tokens[3], "");
+
+				try {
+					this.sendMessageForServerFileSystem(msg3);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			if (tokens[0].equals(touch)) {
+				Message msg4 = new Message();
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg4,
+						Integer.toString(nodeName), receiver,
+						PipeMensageUtilites.create, tokens[1], "");
+
+				try {
+					this.sendMessageForServerFileSystem(msg4);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+	}
+
 	public static void main(String args[]) throws IOException,
 			InterruptedException {
 
 		// System.out.println(args[0]);
 
-		// int node = Integer.parseInt(args[0]);
+//		 int node = Integer.parseInt(args[0]);
 		int node = 1;
 		System.out.println("NODE: " + node);
 		NodeClientFileSystem nc = new NodeClientFileSystem(node);
 		nc.start();
 
-		Thread.sleep(10000);
+		nc.startUserCommunication();
 
-		String sender = Integer.toString(node);
-		String receiver = "-1";
-		String fileName1 = "jaca.txt";
-		String insert = "HELLO WORLD JXTA !!!!!";
-
-		Message msg1 = new Message();
-		Message msg2 = new Message();
-
-		MsgFileSystem msgFileSystem = new MsgFileSystem();
-
-		switch (node) {
-
-		case 0:
-
-			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
-					receiver, PipeMensageUtilites.create, fileName1, "");
-
-			// MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
-			// receiver, PipeMensageUtilites.delete, fileName1, "");
-
-			Thread.sleep(1000);
-			nc.sendMessageForServerFileSystem(msg1);
-			Thread.sleep(2000);
-			// nc.sendMessageForServerFileSystem(msg2);
-
-			break;
-
-		case 1:
-
-			MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
-					receiver, PipeMensageUtilites.read, fileName1, "");
-
-			MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
-					receiver, PipeMensageUtilites.write, fileName1, "");
-
-			msgFileSystem.addByteArrayToMessage(msg2, null,
-					PipeMensageUtilites.stream, insert.getBytes());
-
-			InputStream in = msgFileSystem.getInputStreamFromMessage(msg2);
-
-			byte data[] = new byte[in.available()];
-			in.read(data);
-
-			// String str = new String(data);
-			// System.out.println(str);
-
-			nc.sendMessageForServerFileSystem(msg2);
-			Thread.sleep(5000);
-			nc.sendMessageForServerFileSystem(msg1);
-
-			break;
-		}
-
-		while (true)
-			;
+		// Thread.sleep(10000);
+		//
+		// String sender = Integer.toString(node);
+		// String receiver = "-1";
+		// String fileName1 = "jaca.txt";
+		// String insert = "HELLO WORLD JXTA !!!!!";
+		//
+		// Message msg1 = new Message();
+		// Message msg2 = new Message();
+		//
+		// MsgFileSystem msgFileSystem = new MsgFileSystem();
+		//
+		// switch (node) {
+		//
+		// case 0:
+		//
+		// MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
+		// receiver, PipeMensageUtilites.create, fileName1, "");
+		//
+		// // MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+		// // receiver, PipeMensageUtilites.delete, fileName1, "");
+		//
+		// Thread.sleep(1000);
+		// nc.sendMessageForServerFileSystem(msg1);
+		// Thread.sleep(2000);
+		// // nc.sendMessageForServerFileSystem(msg2);
+		//
+		// break;
+		//
+		// case 1:
+		//
+		// MsgFileSystem.createMessageCentralNodeFileSystem(msg1, sender,
+		// receiver, PipeMensageUtilites.read, fileName1, "");
+		//
+		// MsgFileSystem.createMessageCentralNodeFileSystem(msg2, sender,
+		// receiver, PipeMensageUtilites.write, fileName1, "");
+		//
+		// msgFileSystem.addByteArrayToMessage(msg2, null,
+		// PipeMensageUtilites.stream, insert.getBytes());
+		//
+		// InputStream in = msgFileSystem.getInputStreamFromMessage(msg2);
+		//
+		// byte data[] = new byte[in.available()];
+		// in.read(data);
+		//
+		// // String str = new String(data);
+		// // System.out.println(str);
+		//
+		// nc.sendMessageForServerFileSystem(msg2);
+		// Thread.sleep(5000);
+		// nc.sendMessageForServerFileSystem(msg1);
+		//
+		// break;
+		// }
+		//
+		// while (true)
+		// ;
 	}
 }

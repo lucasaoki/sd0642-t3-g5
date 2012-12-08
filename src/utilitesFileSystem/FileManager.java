@@ -50,6 +50,21 @@ public class FileManager implements UtilitesNodes{
 		return false;
 	}
 
+	public String getAllFileName(){
+		
+		String result = null;
+		
+		for(int i=0;i<NUM_NODES;i++){
+			for(int j=0;j<fileNames[i].size();j++){
+				result += fileNames[i].get(j);
+				result += " ";
+			}
+		}
+		
+		return result;
+	}
+	
+	
 	public boolean insertFileInUse(String fileName){
 		return filesInUse.add(fileName);
 	}
