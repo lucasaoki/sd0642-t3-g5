@@ -161,7 +161,7 @@ public class FileAssist {
 			set_id_input(name);
 			file = new File(name_file);
 			file.createNewFile();
-			update(name, " ");
+//			update(name, " ");
 			
 		} catch (IOException e) {
 			System.err.print("Error - Unable to write to file");
