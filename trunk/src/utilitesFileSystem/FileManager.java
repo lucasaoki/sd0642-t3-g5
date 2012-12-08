@@ -52,7 +52,7 @@ public class FileManager implements UtilitesNodes{
 
 	public String getAllFileName(){
 		
-		String result = null;
+		String result = "";
 		
 		for(int i=0;i<NUM_NODES;i++){
 			for(int j=0;j<fileNames[i].size();j++){

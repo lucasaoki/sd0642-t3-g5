@@ -165,8 +165,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 				case READ_FILE:
 
-					System.out.println("It's reading file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("It's reading file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 
 					is = msgFileSystem.getInputStreamFromMessage(msg);
 
@@ -181,8 +181,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 				case WRITE_FILE:
 
-					System.out.println("It's writing file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("It's writing file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 
 					InputStream in = msgFileSystem
 							.getInputStreamFromMessage(msg);
@@ -190,8 +190,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 					fileAssist.update(
 							msgFileSystem.getFileNameFromMessage(msg), in);
 
-					System.out.println("File update "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("File update "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 
 					break;
 				}
@@ -239,12 +239,12 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 					// Create file
 					fileInterface.get_data('c',
 							msgFileSystem.getFileNameFromMessage(msg), null);
-					System.out.println("Create the file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("Create the file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 				} else {
 					// Nao cria o arquivo
-					System.out.println("Can not create the file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("Can not create the file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 				}
 
 				break;
@@ -256,11 +256,11 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 					// deleta o arquivo
 					fileInterface.get_data('d',
 							msgFileSystem.getFileNameFromMessage(msg), null);
-					System.out.println("Delete the file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("Delete the file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 				} else {
-					System.out.println("Can not delete the file: "
-							+ msgFileSystem.getFileNameFromMessage(msg));
+//					System.out.println("Can not delete the file: "
+//							+ msgFileSystem.getFileNameFromMessage(msg));
 				}
 				break;
 
@@ -270,8 +270,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				node = msgFileSystem.getSenderFromMessage(msg);
 				String f = msgFileSystem.getFileNameFromMessage(msg);
 
-				System.out.println("It's sending response to client: read "
-						+ Integer.toString(node));
+//				System.out.println("It's sending response to client: read "
+//						+ Integer.toString(node));
 
 				data = fileAssist.getByteFromFile(msgFileSystem
 						.getFileNameFromMessage(msg));
@@ -284,7 +284,12 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 						PipeMensageUtilites.stream, data);
 
 				try {
-					output[node].send(message);
+					if (node != nodeName)
+						output[node].send(message);
+					else {	
+						String str = new String(data);
+						System.out.println(str);
+					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -297,8 +302,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				fileName = msgFileSystem.getFileNameFromMessage(msg);
 				node = Integer.parseInt(response);
 
-				System.out.println("It's sending response to client: write "
-						+ Integer.toString(node));
+//				System.out.println("It's sending response to client: write "
+//						+ Integer.toString(node));
 
 				try {
 					InputStream in = msgFileSystem
@@ -319,18 +324,26 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 						PipeMensageUtilites.stream, data);
 
 				try {
-					output[node].send(message);
+					if (node != nodeName)
+						output[node].send(message);
+					else {
+						InputStream in = msgFileSystem
+								.getInputStreamFromMessage(msg);
+
+						fileAssist.update(
+								msgFileSystem.getFileNameFromMessage(msg), in);
+					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				break;
 			case ALL_FILE:
-				
+
 				response = msgFileSystem.getResponseFromMessage(msg);
-				
+
 				System.out.println(response);
-				
+
 				break;
 			}
 		}
@@ -517,7 +530,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 		String echo = "echo";
 		String cat = "cat";
 		String touch = "touch";
-
+		String rm = "rm";
+		
 		String receiver = "-1";
 
 		while (true) {
@@ -527,12 +541,12 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 			tokens = command.split(Delimeter);
 
-			if (tokens[0].equals(ls)) {	
+			if (tokens[0].equals(ls)) {
 				Message msg1 = new Message();
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg1,
 						Integer.toString(nodeName), receiver,
 						PipeMensageUtilites.allFiles, "", "");
-				
+
 				try {
 					this.sendMessageForServerFileSystem(msg1);
 				} catch (IOException e) {
@@ -560,7 +574,7 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 				Message msg3 = new Message();
 				MsgFileSystem.createMessageCentralNodeFileSystem(msg3,
 						Integer.toString(nodeName), receiver,
-						PipeMensageUtilites.read, tokens[3], "");
+						PipeMensageUtilites.read, tokens[1], "");
 
 				try {
 					this.sendMessageForServerFileSystem(msg3);
@@ -582,7 +596,21 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 					e.printStackTrace();
 				}
 			}
+			if (tokens[0].equals(rm)) {
+				Message msg5 = new Message();
+				MsgFileSystem.createMessageCentralNodeFileSystem(msg5,
+						Integer.toString(nodeName), receiver,
+						PipeMensageUtilites.delete, tokens[1], "");
 
+				try {
+					this.sendMessageForServerFileSystem(msg5);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e1) {
@@ -597,8 +625,8 @@ public class NodeClientFileSystem implements DiscoveryListener, UtilitesNodes,
 
 		// System.out.println(args[0]);
 
-//		 int node = Integer.parseInt(args[0]);
-		int node = 1;
+		int node = Integer.parseInt(args[0]);
+		// int node = 1;
 		System.out.println("NODE: " + node);
 		NodeClientFileSystem nc = new NodeClientFileSystem(node);
 		nc.start();

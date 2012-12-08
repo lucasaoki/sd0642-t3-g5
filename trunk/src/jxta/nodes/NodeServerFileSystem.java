@@ -329,9 +329,7 @@ public class NodeServerFileSystem implements UtilitesNodes,
 						+ Integer.toString(sender));
 				
 				response = fileManager.getAllFileName();
-				if( response == null)
-					response = "";
-				
+	
 				try {
 				
 					MsgFileSystem.createMessageCentralNodeFileSystem(msg,
