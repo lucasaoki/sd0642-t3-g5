@@ -312,9 +312,6 @@ public class NodeServerFileSystem implements UtilitesNodes,
 					byte data[] = new byte[in.available()];
 					in.read(data);
 
-					// String str = new String(data);
-					// System.out.println(str);
-
 					msgFileSystem.addByteArrayToMessage(msg, null,
 							PipeMensageUtilites.stream, data);
 
@@ -324,6 +321,28 @@ public class NodeServerFileSystem implements UtilitesNodes,
 					e.printStackTrace();
 				}
 
+				break;
+				
+			case ALL_FILE:
+				
+				System.out.println("It's sending response to client: list of files "
+						+ Integer.toString(sender));
+				
+				response = fileManager.getAllFileName();
+				if( response == null)
+					response = "";
+				
+				try {
+				
+					MsgFileSystem.createMessageCentralNodeFileSystem(msg,
+							Integer.toString(-1), Integer.toString(sender),
+							PipeMensageUtilites.allFiles, fileName, response);
+					
+					pipe.sendMessage(msg);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				break;
 			}
 

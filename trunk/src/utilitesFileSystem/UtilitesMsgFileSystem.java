@@ -12,4 +12,6 @@ public interface UtilitesMsgFileSystem {
 	public static int WRITE_FILE = 7;
 	public static int DELETE_FILE = 8;
 	public static int MOVE_FILE = 9;
+	
+	public static int ALL_FILE = 10;
 }

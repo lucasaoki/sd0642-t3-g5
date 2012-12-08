@@ -65,7 +65,11 @@ public class MsgFileSystem implements PipeMensageUtilites,
         if (function.equals(PipeMensageUtilites.write)) {
             return WRITE_MSG;
         }
-
+        if (function.equals(PipeMensageUtilites.allFiles)) {
+            return ALL_FILE;
+        }
+        
+        
         // exclusivas dos nos clientes
         if (function.equals(PipeMensageUtilites.readFile)) {
             return READ_FILE;
